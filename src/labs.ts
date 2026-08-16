@@ -39,7 +39,7 @@ export const labs: readonly LabDefinition[] = [
     name: 'Black Hole Optics',
     field: 'General relativity',
     summary: 'Trace light near compact objects and separate physical lensing from artistic emission.',
-    status: 'research',
+    status: 'available',
     model: 'Schwarzschild null geodesics · Kerr extension planned',
   },
   {

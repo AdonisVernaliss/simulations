@@ -44,6 +44,13 @@ const start = async (): Promise<void> => {
     return;
   }
 
+  if (lab.id === 'black-hole') {
+    const { BlackHoleLab } = await import('./simulations/black-hole-lab/black-hole-lab');
+    document.title = 'Black Hole Optics Lab';
+    new BlackHoleLab(app).start();
+    return;
+  }
+
   new ResearchWorkspace(app, lab).start();
 };
 
