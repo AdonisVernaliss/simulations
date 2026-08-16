@@ -13,7 +13,10 @@ const createLabCard = (lab: LabDefinition): HTMLElement => {
     <p class="catalog-field">${lab.field}</p>
     <h2>${lab.name}</h2>
     <p>${lab.summary}</p>
-    <p class="catalog-model">${lab.model}</p>
+    <p class="catalog-model">
+      ${lab.model}
+      <span>${lab.experimentCount} guided experiments</span>
+    </p>
     <a href="${getLabUrl(lab.id)}" ${lab.status === 'research' ? 'aria-describedby="research-note"' : ''}>
       ${statusLabel}<span aria-hidden="true">↗</span>
     </a>

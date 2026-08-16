@@ -199,6 +199,21 @@
   line-height: 1.5;
 }
 
+.catalog-model span {
+  display: block;
+  width: fit-content;
+  margin-top: 10px;
+  padding: 5px 7px;
+  border: 1px solid rgba(110, 204, 255, 0.13);
+  border-radius: 7px;
+  color: #73bfe8;
+  background: rgba(19, 49, 68, 0.3);
+  font-size: 0.52rem;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .catalog-card a {
   display: flex;
   align-items: center;

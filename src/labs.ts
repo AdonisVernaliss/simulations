@@ -7,6 +7,7 @@ export interface LabDefinition {
   readonly summary: string;
   readonly status: 'available' | 'research';
   readonly model: string;
+  readonly experimentCount: number;
 }
 
 export const labs: readonly LabDefinition[] = [
@@ -17,6 +18,7 @@ export const labs: readonly LabDefinition[] = [
     summary: 'Build and inspect gravitational systems in a real-time Newtonian N-body sandbox.',
     status: 'available',
     model: 'Newtonian point masses · velocity Verlet · inelastic merging',
+    experimentCount: 4,
   },
   {
     id: 'atomic',
@@ -25,6 +27,7 @@ export const labs: readonly LabDefinition[] = [
     summary: 'Explore stationary hydrogenic states as probability densities rather than particle paths.',
     status: 'available',
     model: 'Coulomb Schrödinger equation · analytic hydrogenic eigenstates',
+    experimentCount: 4,
   },
   {
     id: 'particle',
@@ -33,6 +36,7 @@ export const labs: readonly LabDefinition[] = [
     summary: 'Inspect relativistic charged-particle tracks, decays, and conservation laws.',
     status: 'available',
     model: 'Relativistic kinematics · Lorentz force · evaluated particle data',
+    experimentCount: 5,
   },
   {
     id: 'black-hole',
@@ -41,6 +45,7 @@ export const labs: readonly LabDefinition[] = [
     summary: 'Trace light near compact objects and separate physical lensing from artistic emission.',
     status: 'available',
     model: 'Schwarzschild null geodesics · Kerr extension planned',
+    experimentCount: 5,
   },
   {
     id: 'quasar',
@@ -49,6 +54,7 @@ export const labs: readonly LabDefinition[] = [
     summary: 'Study how mass and accretion rate set the thermal structure of a luminous thin disk.',
     status: 'available',
     model: 'Zero-torque thin disk · Eddington scaling · local blackbody emission',
+    experimentCount: 4,
   },
 ] as const;
 
