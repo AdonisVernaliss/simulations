@@ -21,6 +21,8 @@ type OrbitalExperimentId =
   | 'solar-system'
   | 'black-hole-flyby'
   | 'black-hole-binary'
+  | 'black-hole-merger'
+  | 'planetary-disruption'
   | 'binary-stars'
   | 'figure-eight'
   | 'head-on-collision';
@@ -48,6 +50,20 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     observation: 'The star and black hole orbit their barycentre; the outer worlds respond to both at every step.',
   },
   {
+    id: 'black-hole-merger',
+    label: 'Black hole merger',
+    title: 'Horizons combine and radiate energy',
+    question: 'Why is the final black hole lighter than the two initial masses added together?',
+    observation: 'The retained remnant carries momentum; the event card reports the estimated mass-equivalent gravitational radiation.',
+  },
+  {
+    id: 'planetary-disruption',
+    label: 'Planet disruption',
+    title: 'Impact energy changes the outcome regime',
+    question: 'What changes when a collision exceeds the catastrophic disruption threshold?',
+    observation: 'Compare this with accretion: the largest remnant and debris continue as gravitating bodies.',
+  },
+  {
     id: 'binary-stars',
     label: 'Binary stars',
     title: 'Orbit a shared center of mass',
@@ -63,9 +79,9 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
   },
   {
     id: 'head-on-collision',
-    label: 'Collision',
-    title: 'Merge two gravitating bodies',
-    question: 'Which quantities survive a perfectly inelastic collision?',
+    label: 'Planet accretion',
+    title: 'Merge below the disruption threshold',
+    question: 'Which quantities survive a low-energy planetary collision?',
     observation: 'Total mass and linear momentum remain; kinetic energy is converted and is not conserved.',
   },
 ] as const;

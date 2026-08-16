@@ -83,4 +83,25 @@ describe('orbital presets', () => {
     expect(simulation.masses[0]).toBeCloseTo(2, 12);
     expect(Math.hypot(...simulation.getDiagnostics().linearMomentum)).toBeLessThan(1e-12);
   });
+
+  it('includes a high-energy collision that creates resolved remnants', () => {
+    const preset = presets.find((candidate) => candidate.id === 'planetary-disruption');
+    expect(preset).toBeDefined();
+    const simulation = new NBodySimulation(preset!.bodies, {
+      collisions: true,
+      softening: 0.0001,
+    });
+
+    for (
+      let index = 0;
+      index < 8_000 && simulation.lastCollisionEvent === undefined;
+      index += 1
+    ) {
+      simulation.step(preset!.fixedStep);
+    }
+
+    expect(simulation.lastCollisionEvent?.outcome).toBe('disruption');
+    expect(simulation.count).toBeGreaterThan(2);
+    expect(Array.from(simulation.masses).reduce((sum, mass) => sum + mass, 0)).toBeCloseTo(2, 10);
+  });
 });

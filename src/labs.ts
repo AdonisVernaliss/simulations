@@ -18,7 +18,7 @@ export const labs: readonly LabDefinition[] = [
     summary: 'Build and inspect gravitational systems in a real-time Newtonian N-body sandbox.',
     status: 'available',
     model: 'Newtonian point masses · velocity Verlet · inelastic merging',
-    experimentCount: 6,
+    experimentCount: 8,
   },
   {
     id: 'atomic',
