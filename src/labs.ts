@@ -45,7 +45,7 @@ export const labs: readonly LabDefinition[] = [
     summary: 'Trace light near compact objects and separate physical lensing from artistic emission.',
     status: 'available',
     model: 'Schwarzschild null geodesics · Kerr extension planned',
-    experimentCount: 5,
+    experimentCount: 0,
   },
   {
     id: 'quasar',

@@ -1,70 +1,11 @@
 import './black-hole-lab.css';
 
 import {
-  GuidedExperiments,
-  type GuidedExperiment,
-} from '../../core/guided-experiments';
-import {
   CRITICAL_IMPACT_PARAMETER,
   getSchwarzschildRadius,
   type NullGeodesic,
 } from './model/schwarzschild';
 import { GeodesicRenderer } from './renderer/geodesic-renderer';
-
-type BlackHoleExperimentId = 'strong-lensing' | 'capture' | 'near-critical' | 'weak-field' | 'scale';
-
-interface BlackHoleExperiment extends GuidedExperiment<BlackHoleExperimentId> {
-  readonly impactParameter: number;
-  readonly massExponent: number;
-}
-
-const BLACK_HOLE_EXPERIMENTS: readonly BlackHoleExperiment[] = [
-  {
-    id: 'strong-lensing',
-    label: 'Strong lensing',
-    title: 'Bend light through curved spacetime',
-    question: 'How can a photon escape yet turn through a large angle?',
-    observation: 'At b = 3.2rₛ the ray passes outside the photon sphere and escapes strongly deflected.',
-    impactParameter: 3.2,
-    massExponent: 6.5,
-  },
-  {
-    id: 'capture',
-    label: 'Light capture',
-    title: 'Cross the capture boundary',
-    question: 'What happens below the critical impact parameter?',
-    observation: 'The null geodesic crosses the event horizon; no outward path remains.',
-    impactParameter: 2.4,
-    massExponent: 6.5,
-  },
-  {
-    id: 'near-critical',
-    label: 'Photon sphere',
-    title: 'Skim the unstable photon orbit',
-    question: 'Why does a tiny impact change create a huge deflection?',
-    observation: 'At b just above 2.598rₛ, the photon lingers near r = 1.5rₛ before escaping.',
-    impactParameter: 2.62,
-    massExponent: 6.5,
-  },
-  {
-    id: 'weak-field',
-    label: 'Weak lensing',
-    title: 'Recover Einstein’s weak-field limit',
-    question: 'How does bending change far from the horizon?',
-    observation: 'At large b, the deflection approaches α ≈ 2rₛ/b.',
-    impactParameter: 7,
-    massExponent: 6.5,
-  },
-  {
-    id: 'scale',
-    label: 'Change mass',
-    title: 'Same geometry, different physical scale',
-    question: 'Does a heavier Schwarzschild black hole bend a normalized ray differently?',
-    observation: 'The path in rₛ units is unchanged; horizon size and physical time scale grow with mass.',
-    impactParameter: 3.2,
-    massExponent: 9,
-  },
-] as const;
 
 const requireElement = <ElementType extends Element>(
   root: ParentNode,
@@ -93,7 +34,6 @@ export class BlackHoleLab {
   private readonly deflectionValue: HTMLElement;
   private readonly horizonValue: HTMLElement;
   private readonly photonSphereValue: HTMLElement;
-  private readonly experiments: GuidedExperiments<BlackHoleExperimentId>;
   private animationFrame = 0;
   private bundleVisible = true;
   private playing = true;
@@ -115,18 +55,11 @@ export class BlackHoleLab {
     this.photonSphereValue = requireElement(root, '[data-photon-sphere-size]');
     this.renderer = new GeodesicRenderer(canvas);
     this.geodesic = this.renderer.setImpactParameter(Number(this.impactInput.value));
-    this.experiments = new GuidedExperiments(
-      requireElement(root, '.black-hole-viewport'),
-      BLACK_HOLE_EXPERIMENTS,
-      (id) => this.applyExperiment(id),
-    );
     this.bindControls();
   }
 
   start(): void {
     this.updateModel();
-    this.experiments.activate('strong-lensing', false);
-    this.experiments.open();
     this.animationFrame = requestAnimationFrame(this.tick);
   }
 
@@ -142,12 +75,10 @@ export class BlackHoleLab {
 
   private bindControls(): void {
     this.impactInput.addEventListener('input', () => {
-      this.experiments.setFreeMode();
       this.geodesic = this.renderer.setImpactParameter(Number(this.impactInput.value));
       this.updateModel();
     });
     this.massInput.addEventListener('input', () => {
-      this.experiments.setFreeMode();
       this.updateModel();
     });
     this.bundleButton.addEventListener('click', () => {
@@ -162,17 +93,6 @@ export class BlackHoleLab {
       this.playButton.setAttribute('aria-pressed', String(!this.playing));
       this.playButton.textContent = this.playing ? 'Pause photon' : 'Resume photon';
     });
-  }
-
-  private applyExperiment(id: BlackHoleExperimentId): void {
-    const experiment = BLACK_HOLE_EXPERIMENTS.find((candidate) => candidate.id === id);
-    if (experiment === undefined) {
-      return;
-    }
-    this.impactInput.value = String(experiment.impactParameter);
-    this.massInput.value = String(experiment.massExponent);
-    this.geodesic = this.renderer.setImpactParameter(experiment.impactParameter);
-    this.updateModel();
   }
 
   private updateModel(): void {
