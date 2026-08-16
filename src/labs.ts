@@ -23,7 +23,7 @@ export const labs: readonly LabDefinition[] = [
     name: 'Atomic Orbitals',
     field: 'Quantum mechanics',
     summary: 'Explore stationary hydrogenic states as probability densities rather than particle paths.',
-    status: 'research',
+    status: 'available',
     model: 'Coulomb Schrödinger equation · analytic hydrogenic eigenstates',
   },
   {

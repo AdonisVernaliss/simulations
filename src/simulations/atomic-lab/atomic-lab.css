@@ -1,0 +1,524 @@
+.atomic-shell,
+.atomic-viewport {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.atomic-shell {
+  position: relative;
+  overflow: hidden;
+  color: #eef7ff;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(18, 71, 105, 0.18), transparent 34%),
+    radial-gradient(circle at 22% 76%, rgba(87, 37, 100, 0.14), transparent 29%),
+    #010409;
+}
+
+.atomic-viewport {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.atomic-viewport::before,
+.atomic-viewport::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+}
+
+.atomic-viewport::before {
+  background:
+    radial-gradient(circle at center, transparent 36%, rgba(1, 4, 9, 0.34) 78%, rgba(0, 2, 7, 0.75)),
+    linear-gradient(rgba(59, 111, 145, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 111, 145, 0.04) 1px, transparent 1px);
+  background-size: auto, 48px 48px, 48px 48px;
+}
+
+.atomic-viewport::after {
+  background: linear-gradient(180deg, rgba(2, 6, 14, 0.2), transparent 22%, transparent 70%, rgba(1, 3, 8, 0.58));
+}
+
+.atomic-viewport canvas {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.atomic-topbar {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: grid;
+  min-height: 68px;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 clamp(18px, 3vw, 44px);
+  border-bottom: 1px solid rgba(151, 213, 255, 0.1);
+  background: linear-gradient(180deg, rgba(2, 7, 15, 0.88), rgba(2, 7, 15, 0.28));
+  backdrop-filter: blur(17px);
+}
+
+.atomic-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #f2f8ff;
+  font-size: 0.7rem;
+  font-weight: 730;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.atomic-brand > a {
+  margin-left: 8px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(157, 208, 255, 0.14);
+  color: #71869b;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+}
+
+.atomic-mark {
+  position: relative;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+}
+
+.atomic-mark::before,
+.atomic-mark::after,
+.atomic-mark i {
+  position: absolute;
+  inset: 4px 0;
+  border: 1px solid rgba(95, 205, 255, 0.55);
+  border-radius: 50%;
+  content: "";
+}
+
+.atomic-mark::before {
+  transform: rotate(60deg);
+}
+
+.atomic-mark::after {
+  transform: rotate(-60deg);
+}
+
+.atomic-mark i {
+  transform: rotate(0deg);
+}
+
+.atomic-mark span {
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffe0a1;
+  box-shadow: 0 0 16px #ffc563;
+}
+
+.atomic-state-picker {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 5px 6px 5px 13px;
+  border: 1px solid rgba(144, 207, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(7, 15, 26, 0.64);
+}
+
+.atomic-state-picker > span,
+.atomic-dock label > span {
+  color: #71889d;
+  font-size: 0.57rem;
+  font-weight: 740;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.atomic-state-picker select {
+  width: min(32vw, 250px);
+  min-height: 34px;
+  padding: 0 27px 0 8px;
+  border: 0;
+  color: #dbedff;
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.atomic-status {
+  display: flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+  color: #8296aa;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.atomic-status span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #69dfff;
+  box-shadow: 0 0 11px #48cfff;
+}
+
+.atomic-heading {
+  position: absolute;
+  z-index: 3;
+  bottom: 116px;
+  left: clamp(24px, 6vw, 92px);
+  max-width: min(480px, 43vw);
+  pointer-events: none;
+}
+
+.atomic-eyebrow {
+  margin: 0;
+  color: #62ccff;
+  font-size: 0.59rem;
+  font-weight: 760;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.atomic-heading h1 {
+  margin: 8px 0 8px;
+  color: #f3f8ff;
+  font-size: clamp(2.4rem, 5vw, 5rem);
+  font-weight: 520;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+  text-shadow: 0 3px 25px rgba(0, 0, 0, 0.82);
+}
+
+.atomic-heading > p:nth-child(3) {
+  max-width: 46ch;
+  margin: 0;
+  color: #8fa7ba;
+  font-size: 0.73rem;
+  line-height: 1.55;
+}
+
+.atomic-truth-note {
+  display: flex;
+  max-width: 400px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 17px;
+  padding: 10px 12px;
+  border: 1px solid rgba(108, 206, 255, 0.12);
+  border-radius: 11px;
+  background: rgba(7, 18, 30, 0.54);
+  backdrop-filter: blur(14px);
+}
+
+.atomic-truth-note > span {
+  color: #77d7ff;
+  font-family: Georgia, serif;
+  font-size: 1.3rem;
+  font-style: italic;
+}
+
+.atomic-truth-note p {
+  margin: 0;
+  color: #859db1;
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+.quantum-panel {
+  position: absolute;
+  z-index: 4;
+  top: 92px;
+  right: clamp(18px, 3vw, 44px);
+  width: 286px;
+  padding: 18px;
+  border: 1px solid rgba(142, 211, 255, 0.14);
+  border-radius: 17px;
+  background: rgba(5, 13, 23, 0.66);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(20px);
+}
+
+.quantum-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin: 13px 0 16px;
+}
+
+.quantum-numbers > div {
+  display: grid;
+  min-height: 64px;
+  place-content: center;
+  border: 1px solid rgba(129, 202, 244, 0.12);
+  border-radius: 11px;
+  background: rgba(19, 47, 66, 0.24);
+  text-align: center;
+}
+
+.quantum-numbers span {
+  color: #68859a;
+  font-family: Georgia, serif;
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+.quantum-numbers strong {
+  color: #e6f5ff;
+  font-size: 1.25rem;
+  font-weight: 570;
+}
+
+.quantum-panel dl {
+  margin: 0;
+}
+
+.quantum-panel dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(141, 204, 245, 0.08);
+}
+
+.quantum-panel dt {
+  color: #667e93;
+  font-size: 0.59rem;
+}
+
+.quantum-panel dd {
+  max-width: 62%;
+  margin: 0;
+  color: #c9dfef;
+  font-size: 0.63rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.phase-legend {
+  position: absolute;
+  z-index: 3;
+  right: clamp(18px, 3vw, 44px);
+  bottom: 105px;
+  display: flex;
+  gap: 14px;
+  color: #72899e;
+  font-size: 0.59rem;
+}
+
+.phase-legend span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.phase-legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.phase-positive {
+  background: #62d8ff;
+  box-shadow: 0 0 8px #62d8ff;
+}
+
+.phase-negative {
+  background: #ff9b63;
+  box-shadow: 0 0 8px #ff9b63;
+}
+
+.atomic-hint {
+  position: absolute;
+  z-index: 3;
+  bottom: 103px;
+  left: 50%;
+  margin: 0;
+  color: rgba(150, 180, 202, 0.46);
+  font-size: 0.56rem;
+  letter-spacing: 0.07em;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.atomic-dock {
+  position: absolute;
+  z-index: 6;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
+  display: grid;
+  width: min(530px, calc(100vw - 36px));
+  grid-template-columns: 1fr 1fr 140px;
+  gap: 8px;
+  margin: 0 auto;
+  padding: 8px;
+  border: 1px solid rgba(143, 211, 255, 0.15);
+  border-radius: 15px;
+  background: rgba(5, 13, 23, 0.77);
+  box-shadow: 0 24px 75px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(22px);
+}
+
+.atomic-dock button,
+.atomic-dock select {
+  min-height: 40px;
+  border: 1px solid rgba(141, 203, 244, 0.14);
+  border-radius: 9px;
+  color: #afc4d5;
+  background: rgba(15, 31, 45, 0.78);
+  font-size: 0.66rem;
+  font-weight: 660;
+}
+
+.atomic-dock button {
+  cursor: pointer;
+}
+
+.atomic-dock button[aria-pressed="true"] {
+  border-color: rgba(86, 199, 255, 0.34);
+  color: #e4f6ff;
+  background: rgba(29, 94, 130, 0.4);
+}
+
+.atomic-dock label > span {
+  display: block;
+  margin: 0 0 4px 5px;
+  font-size: 0.5rem;
+}
+
+.atomic-dock select {
+  width: 100%;
+  padding: 0 9px;
+}
+
+@media (max-width: 760px) {
+  .atomic-topbar {
+    min-height: 60px;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    padding: 0 11px;
+  }
+
+  .atomic-brand > span:nth-child(2),
+  .atomic-brand > a,
+  .atomic-state-picker > span {
+    display: none;
+  }
+
+  .atomic-state-picker {
+    justify-self: center;
+    padding-left: 6px;
+  }
+
+  .atomic-state-picker select {
+    width: min(58vw, 250px);
+    font-size: 0.65rem;
+  }
+
+  .atomic-status {
+    font-size: 0;
+  }
+
+  .atomic-heading {
+    top: 78px;
+    right: 16px;
+    bottom: auto;
+    left: 16px;
+    max-width: none;
+  }
+
+  .atomic-heading h1 {
+    font-size: clamp(2.2rem, 12vw, 3.8rem);
+  }
+
+  .atomic-heading > p:nth-child(3) {
+    max-width: 72%;
+  }
+
+  .atomic-truth-note {
+    max-width: 74%;
+  }
+
+  .quantum-panel {
+    top: 220px;
+    right: 10px;
+    width: 132px;
+    padding: 10px;
+  }
+
+  .quantum-numbers {
+    gap: 4px;
+    margin: 8px 0;
+  }
+
+  .quantum-numbers > div {
+    min-height: 43px;
+  }
+
+  .quantum-numbers strong {
+    font-size: 0.92rem;
+  }
+
+  .quantum-panel dl > div:nth-child(n + 3) {
+    display: none;
+  }
+
+  .quantum-panel dl > div {
+    display: block;
+  }
+
+  .quantum-panel dd {
+    max-width: 100%;
+    margin-top: 3px;
+    text-align: left;
+  }
+
+  .phase-legend {
+    right: 12px;
+    bottom: 78px;
+  }
+
+  .atomic-hint {
+    display: none;
+  }
+
+  .atomic-dock {
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    width: auto;
+    grid-template-columns: 1fr 1fr 90px;
+    gap: 5px;
+    padding: 7px;
+  }
+
+  .atomic-dock button,
+  .atomic-dock select {
+    min-height: 38px;
+    font-size: 0.58rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atomic-shell *,
+  .atomic-shell *::before,
+  .atomic-shell *::after {
+    transition-duration: 0.01ms !important;
+  }
+}

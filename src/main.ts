@@ -30,6 +30,13 @@ const start = async (): Promise<void> => {
     return;
   }
 
+  if (lab.id === 'atomic') {
+    const { AtomicLab } = await import('./simulations/atomic-lab/atomic-lab');
+    document.title = 'Atomic Orbitals Lab';
+    new AtomicLab(app).start();
+    return;
+  }
+
   new ResearchWorkspace(app, lab).start();
 };
 
