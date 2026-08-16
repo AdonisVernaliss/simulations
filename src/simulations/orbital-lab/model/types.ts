@@ -51,6 +51,9 @@ export interface SimulationOptions {
   readonly gravitationalConstant?: number;
   readonly softening?: number;
   readonly collisions?: boolean;
+  readonly gravitySolver?: 'auto' | 'direct' | 'barnes-hut';
+  readonly gravityDirectThreshold?: number;
+  readonly gravityOpeningAngle?: number;
 }
 
 export interface SimulationDiagnostics {

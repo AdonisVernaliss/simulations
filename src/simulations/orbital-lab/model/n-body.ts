@@ -8,6 +8,7 @@ import type {
   Vector3Tuple,
 } from './types';
 import { analyzeCollision, type CollisionAnalysis } from './collision-model';
+import { AdaptiveGravitySolver, type GravityAlgorithm } from './gravity-solver';
 
 const COMPONENTS_PER_BODY = 3;
 
@@ -54,6 +55,7 @@ export class NBodySimulation {
   readonly softening: number;
   readonly collisions: boolean;
 
+  private readonly gravitySolver: AdaptiveGravitySolver;
   private idsData: string[] = [];
   private namesData: string[] = [];
   private colorsData: string[] = [];
@@ -76,6 +78,16 @@ export class NBodySimulation {
     this.gravitationalConstant = options.gravitationalConstant ?? 1;
     this.softening = options.softening ?? 0.001;
     this.collisions = options.collisions ?? false;
+    const directThreshold =
+      options.gravitySolver === 'direct'
+        ? Number.MAX_SAFE_INTEGER
+        : options.gravitySolver === 'barnes-hut'
+          ? 0
+          : options.gravityDirectThreshold;
+    this.gravitySolver = new AdaptiveGravitySolver({
+      directThreshold,
+      openingAngle: options.gravityOpeningAngle,
+    });
 
     if (!Number.isFinite(this.gravitationalConstant) || this.gravitationalConstant < 0) {
       throw new RangeError('Gravitational constant must be finite and non-negative');
@@ -146,6 +158,10 @@ export class NBodySimulation {
 
   get lastCollisionEvent(): CollisionEvent | undefined {
     return this.lastCollisionEventData;
+  }
+
+  get gravityAlgorithm(): GravityAlgorithm {
+    return this.gravitySolver.algorithm;
   }
 
   addBody(body: BodyDefinition): void {
@@ -296,32 +312,13 @@ export class NBodySimulation {
   }
 
   private computeAccelerations(target: Float64Array): void {
-    target.fill(0);
-
-    for (let bodyIndex = 0; bodyIndex < this.count; bodyIndex += 1) {
-      const offset = bodyIndex * COMPONENTS_PER_BODY;
-
-      for (let otherIndex = bodyIndex + 1; otherIndex < this.count; otherIndex += 1) {
-        const otherOffset = otherIndex * COMPONENTS_PER_BODY;
-        const deltaX = this.positionData[otherOffset]! - this.positionData[offset]!;
-        const deltaY = this.positionData[otherOffset + 1]! - this.positionData[offset + 1]!;
-        const deltaZ = this.positionData[otherOffset + 2]! - this.positionData[offset + 2]!;
-        const squaredDistance =
-          deltaX ** 2 + deltaY ** 2 + deltaZ ** 2 + this.softening ** 2;
-        const inverseDistanceCubed = 1 / (squaredDistance * Math.sqrt(squaredDistance));
-        const bodyScale =
-          this.gravitationalConstant * this.massData[otherIndex]! * inverseDistanceCubed;
-        const otherScale =
-          this.gravitationalConstant * this.massData[bodyIndex]! * inverseDistanceCubed;
-
-        target[offset] = target[offset]! + deltaX * bodyScale;
-        target[offset + 1] = target[offset + 1]! + deltaY * bodyScale;
-        target[offset + 2] = target[offset + 2]! + deltaZ * bodyScale;
-        target[otherOffset] = target[otherOffset]! - deltaX * otherScale;
-        target[otherOffset + 1] = target[otherOffset + 1]! - deltaY * otherScale;
-        target[otherOffset + 2] = target[otherOffset + 2]! - deltaZ * otherScale;
-      }
-    }
+    this.gravitySolver.compute(
+      this.positionData,
+      this.massData,
+      this.gravitationalConstant,
+      this.softening,
+      target,
+    );
   }
 
   private resolveCollisions(): void {

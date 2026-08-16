@@ -77,6 +77,28 @@ describe('NBodySimulation', () => {
     ]);
   });
 
+  it('allows the Barnes-Hut path to be selected without changing the integrator', () => {
+    const bodies: BodyDefinition[] = Array.from({ length: 24 }, (_, index) => ({
+      id: `tree-${index}`,
+      name: `Tree body ${index}`,
+      mass: 0.1 + index * 0.01,
+      radius: 0.001,
+      color: '#ffffff',
+      position: [Math.cos(index) * (2 + index * 0.03), Math.sin(index) * 2, index * 0.01],
+      velocity: [0, 0, 0],
+    }));
+    const simulation = new NBodySimulation(bodies, {
+      gravitationalConstant: 1,
+      softening: 0.001,
+      gravitySolver: 'barnes-hut',
+    });
+
+    simulation.step(0.001);
+
+    expect(simulation.gravityAlgorithm).toBe('barnes-hut');
+    expect(Array.from(simulation.positions).every(Number.isFinite)).toBe(true);
+  });
+
   it('merges colliding bodies while conserving mass and momentum', () => {
     const simulation = new NBodySimulation(
       [
