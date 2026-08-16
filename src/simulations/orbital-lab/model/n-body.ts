@@ -363,18 +363,66 @@ export class NBodySimulation {
       this.idsData[bodyIndex]!,
       this.idsData[otherIndex]!,
     ];
+    const firstMass = this.massData[bodyIndex]!;
+    const secondMass = this.massData[otherIndex]!;
+    const combinedMass = firstMass + secondMass;
+    const contactPosition: Vector3Tuple = [
+      (this.positionData[offset]! * firstMass +
+        this.positionData[otherOffset]! * secondMass) /
+        combinedMass,
+      (this.positionData[offset + 1]! * firstMass +
+        this.positionData[otherOffset + 1]! * secondMass) /
+        combinedMass,
+      (this.positionData[offset + 2]! * firstMass +
+        this.positionData[otherOffset + 2]! * secondMass) /
+        combinedMass,
+    ];
+    const separation = Math.hypot(...relativePosition);
+    const contactNormal: Vector3Tuple =
+      separation > Number.EPSILON
+        ? [
+            relativePosition[0] / separation,
+            relativePosition[1] / separation,
+            relativePosition[2] / separation,
+          ]
+        : [1, 0, 0];
+    const visualRadius = Math.max(
+      this.renderRadiusData[bodyIndex]!,
+      this.renderRadiusData[otherIndex]!,
+    );
 
     if (analysis.outcome === 'hit-and-run') {
       this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
-      this.recordCollision(participants, analysis, 0);
+      this.recordCollision(
+        participants,
+        analysis,
+        contactPosition,
+        contactNormal,
+        visualRadius,
+        0,
+      );
     } else if (analysis.outcome === 'disruption') {
       // A credible disruptive impact requires a hydrodynamic/SPH solver. Keep
       // the two resolved masses and separate them instead of inventing a
       // handful of spherical fragments that would be mistaken for physics.
       this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
-      this.recordCollision(participants, analysis, 0);
+      this.recordCollision(
+        participants,
+        analysis,
+        contactPosition,
+        contactNormal,
+        visualRadius,
+        0,
+      );
     } else {
-      this.recordCollision(participants, analysis, 1);
+      this.recordCollision(
+        participants,
+        analysis,
+        contactPosition,
+        contactNormal,
+        visualRadius,
+        1,
+      );
       this.mergePair(bodyIndex, otherIndex, analysis);
     }
   }
@@ -533,6 +581,9 @@ export class NBodySimulation {
   private recordCollision(
     participants: readonly [string, string],
     analysis: CollisionAnalysis,
+    position: Vector3Tuple,
+    normal: Vector3Tuple,
+    visualRadius: number,
     fragmentCount: number,
   ): void {
     this.collisionSequence += 1;
@@ -545,6 +596,13 @@ export class NBodySimulation {
       mutualEscapeSpeed: analysis.mutualEscapeSpeed,
       specificImpactEnergy: analysis.specificImpactEnergy,
       disruptionThreshold: analysis.disruptionThreshold,
+      position,
+      normal,
+      visualRadius,
+      // The empirical giant-impact ensemble gives a characteristic escaping
+      // debris speed near half the impact speed. This is metadata for the
+      // unresolved tracer cloud, not a replacement for fragment dynamics.
+      ejectaSpeed: analysis.impactSpeed * 0.5,
       fragmentCount,
       radiatedMass: analysis.radiatedMass,
     };

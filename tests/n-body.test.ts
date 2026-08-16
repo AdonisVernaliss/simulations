@@ -309,6 +309,13 @@ describe('NBodySimulation', () => {
     simulation.step(0.0001);
 
     expect(simulation.lastCollisionEvent?.outcome).toBe('disruption');
+    expect(simulation.lastCollisionEvent?.position).toEqual([0, 0, 0]);
+    expect(simulation.lastCollisionEvent?.normal).toEqual([1, 0, 0]);
+    expect(simulation.lastCollisionEvent?.ejectaSpeed).toBeCloseTo(
+      simulation.lastCollisionEvent!.impactSpeed * 0.5,
+      12,
+    );
+    expect(simulation.lastCollisionEvent?.visualRadius).toBe(0.2);
     expect(simulation.count).toBe(2);
     expect(simulation.lastCollisionEvent?.fragmentCount).toBe(0);
     expect(Array.from(simulation.masses).reduce((sum, mass) => sum + mass, 0)).toBeCloseTo(2, 12);

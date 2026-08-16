@@ -380,6 +380,7 @@ export class OrbitalLab {
     }
 
     this.lastCollisionSequence = collision.sequence;
+    this.renderer.showCollision(collision);
     const descriptions: Record<CollisionEvent['outcome'], readonly [string, string]> = {
       merge: [
         'Hot impact remnant',
@@ -391,7 +392,7 @@ export class OrbitalLab {
       ],
       disruption: [
         'Hydrodynamic limit reached',
-        'Impact energy crossed the disruption threshold. Fragment animation is intentionally omitted: resolving the debris requires a fluid/SPH model.',
+        'Impact energy crossed the disruption threshold. The expanding cloud marks unresolved ejecta; fragment masses and trajectories require a fluid/SPH model.',
       ],
       capture: [
         'Horizon capture',
@@ -604,6 +605,7 @@ export class OrbitalLab {
     window.clearTimeout(this.collisionNoticeTimeout);
     this.lastCollisionSequence = 0;
     this.collisionNotice.dataset.open = 'false';
+    this.renderer.clearCollisionVisual();
   }
 
   private togglePaused(): void {

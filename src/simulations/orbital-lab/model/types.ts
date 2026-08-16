@@ -82,6 +82,14 @@ export interface CollisionEvent {
   readonly mutualEscapeSpeed: number;
   readonly specificImpactEnergy: number;
   readonly disruptionThreshold: number;
+  /** Centre-of-mass contact position in model coordinates. */
+  readonly position: Vector3Tuple;
+  /** Unit vector from the first participant toward the second at contact. */
+  readonly normal: Vector3Tuple;
+  /** Largest readability radius of the colliding pair. */
+  readonly visualRadius: number;
+  /** Characteristic unresolved ejecta speed in model units per time unit. */
+  readonly ejectaSpeed: number;
   readonly fragmentCount: number;
   readonly radiatedMass: number;
 }

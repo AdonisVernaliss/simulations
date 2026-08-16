@@ -26,12 +26,14 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 import type { BodyMetadata } from '../worker-protocol';
+import type { CollisionEvent } from '../model/types';
 import { calculateTidalStressRatio } from '../model/tidal-stress';
 import {
   CelestialBodyVisual,
   CelestialMaterialLibrary,
 } from './celestial-body-visual';
 import { GravityFieldVisual } from './gravity-field-visual';
+import { ImpactEjectaCloud } from './impact-ejecta-cloud';
 import { SkyEnvironment } from './sky-environment';
 
 export type QualityLevel = 'low' | 'balanced' | 'high';
@@ -127,6 +129,7 @@ class BodyTrail {
 export class OrbitalRenderer {
   private readonly renderer: WebGLRenderer;
   private readonly gravityField = new GravityFieldVisual();
+  private readonly impactEjecta = new ImpactEjectaCloud();
   private readonly scene = new Scene();
   private readonly compactObjectOverlay = new Scene();
   private readonly camera = new PerspectiveCamera(42, 1, 0.01, 250);
@@ -193,6 +196,7 @@ export class OrbitalRenderer {
     this.selectionRing = this.createSelectionRing();
     this.scene.add(this.skyEnvironment.mesh);
     this.scene.add(this.gravityField.mesh);
+    this.scene.add(this.impactEjecta.points);
     this.scene.add(this.ambientLight);
     this.scene.add(this.primaryLight);
     this.scene.add(this.selectionRing);
@@ -292,6 +296,7 @@ export class OrbitalRenderer {
     const elapsedSeconds = Math.min((now - this.previousRenderTime) / 1_000, 0.25);
     this.previousRenderTime = now;
     this.animateFocus(elapsedSeconds);
+    this.impactEjecta.update(elapsedSeconds, this.canvas.clientHeight);
     this.skyEnvironment.update(this.camera.position);
     if (this.selectionRing.visible) {
       this.selectionRing.lookAt(this.camera.position);
@@ -326,7 +331,16 @@ export class OrbitalRenderer {
       visual.setSkyTexture(this.skyEnvironment.texture);
     });
     this.gravityField.setQuality(quality);
+    this.impactEjecta.setQuality(quality);
     this.resize();
+  }
+
+  showCollision(collision: CollisionEvent): void {
+    this.impactEjecta.show(collision);
+  }
+
+  clearCollisionVisual(): void {
+    this.impactEjecta.clear();
   }
 
   setVelocityVectorsVisible(visible: boolean): void {
@@ -401,6 +415,7 @@ export class OrbitalRenderer {
     this.glowTexture.dispose();
     this.materialLibrary.dispose();
     this.gravityField.dispose();
+    this.impactEjecta.dispose();
     this.renderer.dispose();
   }
 
