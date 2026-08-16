@@ -51,6 +51,13 @@ const start = async (): Promise<void> => {
     return;
   }
 
+  if (lab.id === 'quasar') {
+    const { QuasarLab } = await import('./simulations/quasar-lab/quasar-lab');
+    document.title = 'Quasar Engine Lab';
+    new QuasarLab(app).start();
+    return;
+  }
+
   new ResearchWorkspace(app, lab).start();
 };
 

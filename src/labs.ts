@@ -46,9 +46,9 @@ export const labs: readonly LabDefinition[] = [
     id: 'quasar',
     name: 'Quasar Engine',
     field: 'Relativistic astrophysics',
-    summary: 'Study accretion, temperature profiles, relativistic transfer, and jet assumptions.',
-    status: 'research',
-    model: 'Thin-disc baseline · radiative transfer · explicit phenomenology',
+    summary: 'Study how mass and accretion rate set the thermal structure of a luminous thin disk.',
+    status: 'available',
+    model: 'Zero-torque thin disk · Eddington scaling · local blackbody emission',
   },
 ] as const;
 
