@@ -15,24 +15,25 @@ The application uses stable query-based laboratory addresses that work on static
 
 Opening the root address without a query loads Cosmic Sandbox.
 
-Each laboratory opens with guided experiments that load validated initial conditions and explain
-what to change, what to observe, and which relation causes the result. Manual control switches to
-free-experiment mode without changing the underlying physical model. See
+Laboratories with guided experiments expose them from a non-blocking control that loads validated
+initial conditions and explains what to change, what to observe, and which relation causes the
+result. Black Hole Optics uses direct controls only. Manual control switches to free-experiment
+mode without changing the underlying physical model. See
 [Laboratory and experiment design](docs/experiment-design.md).
 
 ## Cosmic Sandbox
 
 The first simulation models gravitational systems with:
 
-- solar system, binary-star, figure-eight, black-hole encounter, merger, accretion, and disruption presets;
-- black holes, stars, terrestrial worlds, rocky bodies, gas giants, and ice giants in one N-body scene;
+- eleven systems covering the Solar System, stellar and compact binaries, a figure eight, black-hole encounters and mergers, an active nucleus, a pulsar system, accretion, and disruption;
+- black holes, active nuclei, neutron stars, pulsars, ordinary stars, terrestrial worlds, rocky bodies, gas giants, and ice giants in one N-body scene;
 - configurable object type, mass, position, velocity, physical radius, visual radius, and color;
 - orbital trails and optional velocity vectors;
 - direct object selection, a live object inspector, and camera tracking;
 - NASA/JPL planet maps, procedural photospheres and planetary materials, atmosphere, rings, and adjustable geometry detail;
-- screen-space Schwarzschild thin-lens distortion and an optional Newtonian potential overlay;
-- live energy, momentum, frame rate, and simulation-time diagnostics;
-- pause, reset, time-scale, camera, and rendering-quality controls;
+- screen-space Schwarzschild thin-lens distortion, a DNGR-informed black-hole appearance, and an optional Newtonian potential overlay;
+- live energy, momentum, frame rate, and physical elapsed-time diagnostics;
+- physical time warp from real time through `10⁷×`, plus pause, reset, camera, and rendering-quality controls;
 - energy- and geometry-dependent accretion, hit-and-run, disruption, capture, and black-hole merger outcomes;
 - automatic quality reduction when the frame budget is exceeded.
 
@@ -47,7 +48,7 @@ The first simulation models gravitational systems with:
 
 ## Physical model
 
-The simulation uses normalized units with a gravitational constant of `G = 1`. Motion is integrated with a fixed-step velocity Verlet method. A small Plummer-style softening term limits numerical instability when two point masses approach the same position.
+The simulation uses normalized units with a gravitational constant of `G = 1`. The astronomical presets map one integration-time unit to `sqrt(AU³/GM☉)`, so the time-warp selector advances physical seconds rather than multiplying an arbitrary animation speed. Motion uses velocity Verlet with bounded fixed steps at visible time warps and smaller direct steps near real time. A small Plummer-style softening term limits numerical instability when two point masses approach the same position.
 
 Preset positions and velocities are barycentric, so their initial center of mass and total linear momentum are effectively zero. Physical radii control collision and capture; independent visual radii keep distant objects readable. Ordinary accretion and resolved disruption conserve total mass and linear momentum; kinetic energy is not conserved during a merge.
 
@@ -80,7 +81,7 @@ See the [Particle track model card](docs/particle-tracks.md) for equations, curr
 
 The black-hole laboratory integrates null geodesics of Schwarzschild spacetime. It exposes the event horizon, photon sphere, critical impact parameter, capture boundary, weak-field limit, and conversion from normalized geometry to physical scale.
 
-Five guided experiments cover capture, near-critical escape, strong and weak lensing, and mass scaling. Stellar motion and reduced-order merger scenarios remain in Cosmic Sandbox rather than being imitated with the light-ray model; hydrodynamic tidal disruption is still outside the implemented scope.
+Impact parameter, mass, ray bundle, and photon playback are exposed directly without a guided-experiment panel. Stellar motion and reduced-order merger scenarios remain in Cosmic Sandbox rather than being imitated with the light-ray model; hydrodynamic tidal disruption is still outside the implemented scope.
 
 See the [Black hole optics model card](docs/black-hole-optics.md) for the geodesic equation, exact reference scales, sources, validation, and the distinction between a coordinate diagram and an observed shadow.
 
@@ -88,7 +89,7 @@ See the [Black hole optics model card](docs/black-hole-optics.md) for the geodes
 
 The quasar laboratory computes a steady zero-torque thin-disk baseline: Eddington luminosity, accretion rate, radial dissipation, effective temperature, and the local Wien peak. The false-colour disk is explicitly separated from relativistic transfer, plasma, corona, jet, and GRMHD models.
 
-The disk now has a lightweight live orbital-flow overlay and four guided mass/accretion experiments.
+The disk has a lightweight live orbital-flow overlay and four guided mass/accretion experiments. Absolute temperature changes the false colour, Eddington ratio changes brightness, and the displayed orbital rate retains the physical `period ∝ M` scaling. The black hole and disk are selectable; a direct link opens the same active nucleus as a massive object in Cosmic Sandbox, where additional bodies can be added.
 
 See the [Quasar thin-disk model card](docs/thin-disk.md) for equations, assumptions, sources, validation, and the regimes where the approximation fails.
 
@@ -96,7 +97,7 @@ See the [Quasar thin-disk model card](docs/thin-disk.md) for equations, assumpti
 
 - Physics runs in a dedicated Web Worker.
 - Frame data uses a recycled transferable buffer.
-- Bodies render through a single instanced draw path.
+- Bounded per-body meshes support distinct surfaces, compact-object emission, selection, and quality-dependent geometry.
 - Trails use fixed-size circular GPU buffers.
 - Procedural stars avoid image downloads.
 - Device pixel ratio and star density follow the selected quality level.

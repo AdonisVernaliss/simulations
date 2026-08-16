@@ -40,7 +40,9 @@ The displayed local peak wavelength is Wien's displacement value `λ_max = b/T_m
 
 Colour is a false-colour encoding of calculated effective temperature. It is not a prediction of visible RGB appearance. To keep the hot inner disk legible on small screens, rendered radius is proportional to `sqrt(r)` and the displayed profile ends at `140r_g`; physical values are still evaluated at their labelled radii.
 
-The renderer uses Canvas 2D. Its expensive temperature field is cached and redrawn only after a resize or parameter change. A lightweight overlay animates a bounded set of orbital tracers at 30 frames per second. Their relative angular rates follow the Keplerian relation `Ω ∝ r⁻³⁄²`; display time is deliberately compressed independently of black-hole mass, while the interface reports the calculated physical orbital period at the hottest annulus.
+The renderer uses Canvas 2D. Its expensive temperature field is cached and redrawn only after a resize or parameter change. A lightweight overlay animates a bounded set of orbital tracers at 30 frames per second. Their relative angular rates follow `Ω ∝ r⁻³⁄²`, while the display rate also follows the fixed-dimensionless-radius scaling `period ∝ M`. Colour uses an absolute temperature scale rather than renormalizing every disk to its own peak, and brightness responds to Eddington ratio, so both controls produce visible as well as numerical changes.
+
+The central black hole and thermal disk are selectable regions. A link opens an active-nucleus preset in Cosmic Sandbox, where the black hole is a massive N-body participant and users may add more bodies. Its accretion disk and idealized bipolar jet are rendering overlays and add no force. The jet is included only in that explicitly radio-loud preset; it is not predicted by the thin-disk equations in this laboratory.
 
 ## Validation
 

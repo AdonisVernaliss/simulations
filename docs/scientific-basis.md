@@ -28,14 +28,22 @@ The `ε` term is Plummer-style gravitational softening. It prevents the point-ma
 
 ## Time integration
 
-Each preset advances through a fixed-step velocity Verlet integrator:
+Each preset advances through a velocity Verlet integrator:
 
 ```text
 r(t + Δt) = r(t) + v(t)Δt + ½a(t)Δt²
 v(t + Δt) = v(t) + ½[a(t) + a(t + Δt)]Δt
 ```
 
-Velocity Verlet is a second-order, time-reversible symplectic method. Fixed steps avoid frame-rate-dependent physics. The runtime limits catch-up steps after a delayed browser frame, preferring responsiveness over silently processing an unbounded backlog.
+Velocity Verlet is a second-order, time-reversible symplectic method. At accelerated rates the model uses each preset's fixed step; the runtime bounds catch-up work after a delayed browser frame. When real-time or a low warp requests less than one fixed step in a frame, that smaller positive interval is integrated directly so the physical clock and sidereal rotation do not wait hours for the accumulator to fill.
+
+For presets expressed in astronomical units and solar masses, `G = 1` gives the natural time unit
+
+```text
+t_unit = sqrt(AU³ / GM☉) = 5 022 642.891... s.
+```
+
+The selector specifies physical seconds per real second: `1×` is real time, and the accelerated choices extend through `10⁷×`. The displayed elapsed time converts integrated model time back to seconds, days, or years. Planetary sidereal rotation rates in the Solar System preset use the same physical conversion; retrograde signs are retained. Synthetic impact presets remain similarity-scaled demonstrations and must not be read as ephemerides.
 
 ## Presets
 
@@ -80,6 +88,12 @@ M_rad / M_total = 0.05 × 4η
 
 This is a bounded non-spinning merger estimate, not a waveform or a replacement for numerical relativity. The retained remnant conserves the pre-merger linear momentum; recoil kicks and spin-dependent radiation are omitted.
 
+### Active nuclei, neutron stars, and pulsars
+
+The active-nucleus preset places a radio-loud quasar engine in the same N-body state as its nearby star and giant planet. Gravity comes only from the listed masses. The accretion disk and bipolar jet are emission overlays: they neither add mass nor exert a jet force. The detailed Quasar Engine laboratory separately evaluates the zero-torque thin-disk temperature model.
+
+Neutron stars and pulsars are ordinary massive N-body participants with deliberately enlarged render radii and compact physical radii. The pulsar's 1.337-second spin is converted into the model time unit. Its two cones are an idealized magnetic-axis lighthouse pattern, following the rotating-neutron-star interpretation of pulsations; they are not a radio-emission or plasma-magnetosphere calculation. The double-neutron-star preset is Newtonian and omits gravitational-wave inspiral, tidal deformation, and merger physics.
+
 ## Collisions
 
 Contact is determined only by physical radii. Visual enlargement never changes the collision cross-section. Each ordinary impact is classified from its relative velocity, impact geometry, mutual escape velocity, and center-of-mass specific impact energy
@@ -120,7 +134,9 @@ The shared 3D scene is post-processed around up to two visible black holes. For 
 
 where `D_l` is observer-to-lens distance. The actual scene behind the lens is resampled, so stars, trails, planets, and the accretion disk are visibly deflected. Low and balanced quality process one lens; high quality processes two.
 
-This is physically scaled weak/thin lensing with an explicit horizon mask. It does not depth-sort each source relative to the lens, integrate exact null geodesics per pixel, reproduce higher-order photon rings, or model Kerr lensing. The separate Black Hole Optics laboratory remains the equation-level null-geodesic reference.
+This is physically scaled weak/thin lensing with an explicit shadow mask. Black-hole emission is composited after that pass so the renderer does not incorrectly lens its own disk into giant duplicate Einstein rings. Background stars, trails, planets, and other bodies remain distorted.
+
+The compact-object overlay is informed by the image anatomy demonstrated by the DNGR renderer for *Interstellar*: a black observable shadow, a thin photon-ring cue, a broad temperature-graded accretion disk with left-right beaming asymmetry, and secondary disk arcs above and below the shadow. It is not DNGR itself. It does not integrate Kerr ray bundles, radiative transfer, polarization, higher-order images, or a physical disk spectrum. The event horizon is inside the observable shadow and is not presented as a directly visible surface. The separate Black Hole Optics laboratory remains the equation-level Schwarzschild null-geodesic reference.
 
 ## Visual model and detail levels
 
@@ -172,4 +188,6 @@ Open publication does not automatically permit copying code or datasets. Equatio
 - W. Dehnen, [Towards optimal softening in three-dimensional N-body codes](https://arxiv.org/abs/astro-ph/0011568), *Monthly Notices of the Royal Astronomical Society* 324 (2001), 273–291.
 - Z. M. Leinhardt and S. T. Stewart, [Collisions Between Gravity-Dominated Bodies: I. Outcome Regimes and Scaling Laws](https://arxiv.org/abs/1106.6084), *The Astrophysical Journal* 745 (2012), 79.
 - V. Perlick and O. Y. Tsupko, [Calculating black hole shadows: Review of analytical studies](https://arxiv.org/abs/2105.07101), *Physics Reports* 947 (2022), 1–39.
+- O. James, E. von Tunzelmann, P. Franklin, and K. S. Thorne, [Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar](https://arxiv.org/abs/1502.03808), *Classical and Quantum Gravity* 32 (2015), 065001; DNGR image anatomy and Kerr ray-bundle rendering used as the visual reference, not as the sandbox numerical method.
+- T. Gold, [Rotating Neutron Stars as the Origin of the Pulsating Radio Sources](https://doi.org/10.1038/218731a0), *Nature* 218 (1968), 731–732; rotating-neutron-star lighthouse interpretation used for the schematic pulsar overlay.
 - Observational texture credits and source files are listed in [Visual asset provenance](visual-assets.md).

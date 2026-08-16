@@ -26,6 +26,9 @@ This provides an understandable first action for a new user while retaining a sa
 - a black-hole flyby through a planetary system;
 - a star–black-hole binary with circumbinary worlds;
 - a scaled black-hole merger with radiated-mass estimate;
+- a radio-loud active nucleus inside the shared gravitational scene;
+- a pulsar with a rotating lighthouse-beam overlay and orbiting companions;
+- a Newtonian double-neutron-star baseline;
 - catastrophic planetary disruption with resolved remnants;
 - motion around the barycentre of an equal-mass binary;
 - the periodic three-body figure-eight solution;
@@ -47,11 +50,9 @@ This provides an understandable first action for a new user while retaining a sa
 
 ### Black Hole Optics
 
-- strong lensing with escape;
-- capture below the critical impact parameter;
-- near-critical motion around the photon sphere;
-- the weak-field deflection limit;
-- scale invariance when black-hole mass changes.
+This laboratory deliberately uses direct controls rather than a guided panel. Impact parameter
+continuously crosses weak deflection, near-critical motion, and capture, while mass changes the
+physical scale of the same normalized Schwarzschild geometry.
 
 ### Quasar Engine
 

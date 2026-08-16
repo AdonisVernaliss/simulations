@@ -25,6 +25,8 @@ p⊥ [GeV/c] = 0.299 792 458 |q/e| B [T] R [m]
 
 The sign of `qB` determines the bend direction. When `B = 0`, the track becomes a straight line.
 
+The particle begins at the labelled interaction point with velocity tangent to its track. It does not orbit a mass or the centre of the detector. A uniform solenoidal field supplies the Lorentz force `q(v × B)`, which remains perpendicular to the instantaneous velocity and therefore bends the trajectory without changing its energy in this ideal model. The dashed circle, radius line, and cross identify the geometric centre of curvature used to measure `R`; the cross is not a physical object. Concentric detector circles represent sensor-layer scales, not orbital paths.
+
 ## Decay survival
 
 For unstable particles, the mean decay length in vacuum is
