@@ -10,6 +10,8 @@ const DEFAULT_DIRECT_THRESHOLD = 48;
 export class CollisionBroadphase {
   private readonly directThreshold: number;
   private order: Int32Array<ArrayBuffer> = new Int32Array();
+  private sortPositions: Float64Array | undefined;
+  private sortRadii: Float64Array | undefined;
   private activeAlgorithm: CollisionBroadphaseAlgorithm = 'direct';
 
   constructor(options: CollisionBroadphaseOptions = {}) {
@@ -77,28 +79,25 @@ export class CollisionBroadphase {
     for (let bodyIndex = 0; bodyIndex < radii.length; bodyIndex += 1) {
       this.order[bodyIndex] = bodyIndex;
     }
-    const activeOrder = this.order.subarray(0, radii.length);
-    activeOrder.sort((leftIndex, rightIndex) => {
-      const leftMinimum = positions[leftIndex * COMPONENTS_PER_BODY]! - radii[leftIndex]!;
-      const rightMinimum = positions[rightIndex * COMPONENTS_PER_BODY]! - radii[rightIndex]!;
-      return leftMinimum - rightMinimum || leftIndex - rightIndex;
-    });
+    this.sortPositions = positions;
+    this.sortRadii = radii;
+    this.order.sort(this.compareByMinimumX);
 
     let bestFirst = Number.MAX_SAFE_INTEGER;
     let bestSecond = Number.MAX_SAFE_INTEGER;
 
-    for (let orderIndex = 0; orderIndex < activeOrder.length; orderIndex += 1) {
-      const bodyIndex = activeOrder[orderIndex]!;
+    for (let orderIndex = 0; orderIndex < this.order.length; orderIndex += 1) {
+      const bodyIndex = this.order[orderIndex]!;
       const bodyOffset = bodyIndex * COMPONENTS_PER_BODY;
       const bodyRadius = radii[bodyIndex]!;
       const maximumX = positions[bodyOffset]! + bodyRadius;
 
       for (
         let otherOrderIndex = orderIndex + 1;
-        otherOrderIndex < activeOrder.length;
+        otherOrderIndex < this.order.length;
         otherOrderIndex += 1
       ) {
-        const otherIndex = activeOrder[otherOrderIndex]!;
+        const otherIndex = this.order[otherOrderIndex]!;
         const otherOffset = otherIndex * COMPONENTS_PER_BODY;
         const otherRadius = radii[otherIndex]!;
         if (positions[otherOffset]! - otherRadius > maximumX) {
@@ -138,8 +137,16 @@ export class CollisionBroadphase {
   }
 
   private ensureOrderCapacity(bodyCount: number): void {
-    if (this.order.length < bodyCount) {
+    if (this.order.length !== bodyCount) {
       this.order = new Int32Array(bodyCount);
     }
   }
+
+  private readonly compareByMinimumX = (leftIndex: number, rightIndex: number): number => {
+    const positions = this.sortPositions!;
+    const radii = this.sortRadii!;
+    const leftMinimum = positions[leftIndex * COMPONENTS_PER_BODY]! - radii[leftIndex]!;
+    const rightMinimum = positions[rightIndex * COMPONENTS_PER_BODY]! - radii[rightIndex]!;
+    return leftMinimum - rightMinimum || leftIndex - rightIndex;
+  };
 }
