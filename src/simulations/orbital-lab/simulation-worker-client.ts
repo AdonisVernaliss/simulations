@@ -6,11 +6,13 @@ import type {
 } from './worker-protocol';
 import type { CollisionEvent, SimulationDiagnostics } from './model/types';
 import type { BodyDefinition } from './model/types';
+import type { GravityAlgorithm } from './model/gravity-solver';
 
 export interface SimulationFrame {
   readonly time: number;
   readonly positions: Float32Array;
   readonly diagnostics: SimulationDiagnostics;
+  readonly gravityAlgorithm: GravityAlgorithm;
   readonly droppedTime: number;
   readonly collision?: CollisionEvent;
 }
@@ -115,6 +117,7 @@ export class SimulationWorkerClient {
       time: response.time,
       positions: new Float32Array(response.positions),
       diagnostics: response.diagnostics,
+      gravityAlgorithm: response.gravityAlgorithm,
       droppedTime: response.type === 'frame' ? response.droppedTime : 0,
       collision: response.collision,
     };

@@ -5,6 +5,7 @@ import type {
   CollisionEvent,
   SimulationDiagnostics,
 } from './model/types';
+import type { GravityAlgorithm } from './model/gravity-solver';
 
 export interface BodyMetadata {
   readonly id: string;
@@ -67,6 +68,7 @@ export interface InitializedResponse {
   readonly time: number;
   readonly positions: ArrayBuffer;
   readonly diagnostics: SimulationDiagnostics;
+  readonly gravityAlgorithm: GravityAlgorithm;
   readonly collision?: CollisionEvent;
 }
 
@@ -76,6 +78,7 @@ export interface FrameResponse {
   readonly time: number;
   readonly positions: ArrayBuffer;
   readonly diagnostics: SimulationDiagnostics;
+  readonly gravityAlgorithm: GravityAlgorithm;
   readonly droppedTime: number;
   readonly collision?: CollisionEvent;
 }

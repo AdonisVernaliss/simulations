@@ -166,6 +166,7 @@ export class OrbitalLab {
   private readonly energyDriftElement: HTMLElement;
   private readonly momentumElement: HTMLElement;
   private readonly qualityActiveElement: HTMLElement;
+  private readonly solverActiveElement: HTMLElement;
   private readonly collisionNotice: HTMLElement;
   private readonly closeCollisionButton: HTMLButtonElement;
   private readonly collisionTitle: HTMLElement;
@@ -230,6 +231,7 @@ export class OrbitalLab {
     this.energyDriftElement = requireElement(root, '[data-energy-drift]');
     this.momentumElement = requireElement(root, '[data-momentum]');
     this.qualityActiveElement = requireElement(root, '[data-quality-active]');
+    this.solverActiveElement = requireElement(root, '[data-solver-active]');
     this.collisionNotice = requireElement(root, '[data-collision-notice]');
     this.closeCollisionButton = requireElement(root, '[data-close-collision]');
     this.collisionTitle = requireElement(root, '[data-collision-title]');
@@ -359,6 +361,8 @@ export class OrbitalLab {
     this.fpsElement.textContent = formatNumber(this.framesPerSecond, 0);
     this.energyDriftElement.textContent = `${energyDrift.toExponential(1)}%`;
     this.momentumElement.textContent = momentum.toExponential(2);
+    this.solverActiveElement.textContent =
+      frame.gravityAlgorithm === 'barnes-hut' ? 'Barnes–Hut' : 'direct';
     this.lastMetricsUpdate = now;
   }
 
@@ -821,7 +825,7 @@ export class OrbitalLab {
                 <strong data-momentum>—</strong>
               </div>
             </div>
-            <p class="quality-note">Render <span data-quality-active>balanced</span></p>
+            <p class="quality-note">Render <span data-quality-active>balanced</span> · Physics <span data-solver-active>direct</span></p>
           </aside>
 
           <aside class="collision-notice" data-collision-notice data-open="false" aria-live="polite">
