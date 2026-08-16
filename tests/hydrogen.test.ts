@@ -38,9 +38,40 @@ describe('analytic hydrogen orbitals', () => {
   it('returns finite non-negative probability density', () => {
     const state = getHydrogenState('3d-z2');
     for (const point of [[0, 0, 0], [1, 2, 3], [-4, 0.5, 2]] as const) {
-      const density = probabilityDensity(state, ...point);
+      const density = probabilityDensity(state, point[0], point[1], point[2]);
       expect(Number.isFinite(density)).toBe(true);
       expect(density).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('normalizes every implemented wavefunction in three dimensions', () => {
+    const radialSteps = 500;
+    const angularSteps = 160;
+    const maximumRadius = 100;
+    const radialStep = maximumRadius / radialSteps;
+    const angularStep = Math.PI / angularSteps;
+
+    for (const stateId of ['1s', '2s', '2p-z', '3p-z', '3d-z2'] as const) {
+      const state = getHydrogenState(stateId);
+      let integral = 0;
+      for (let radialIndex = 0; radialIndex < radialSteps; radialIndex += 1) {
+        const radius = (radialIndex + 0.5) * radialStep;
+        for (let angularIndex = 0; angularIndex < angularSteps; angularIndex += 1) {
+          const theta = (angularIndex + 0.5) * angularStep;
+          const x = radius * Math.sin(theta);
+          const z = radius * Math.cos(theta);
+          integral +=
+            probabilityDensity(state, x, 0, z) *
+            2 *
+            Math.PI *
+            radius *
+            radius *
+            Math.sin(theta) *
+            radialStep *
+            angularStep;
+        }
+      }
+      expect(integral).toBeCloseTo(1, 2);
     }
   });
 });

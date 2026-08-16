@@ -105,7 +105,7 @@ export const wavefunction = (
       return (z * Math.exp(-radius / 2)) / (4 * Math.sqrt(2 * Math.PI));
     case '3p-z':
       return (
-        (2 * Math.sqrt(2) * z * (6 - radius) * Math.exp(-radius / 3)) /
+        (Math.sqrt(2) * z * (6 - radius) * Math.exp(-radius / 3)) /
         (81 * Math.sqrt(Math.PI))
       );
     case '3d-z2':
