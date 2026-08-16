@@ -13,15 +13,19 @@ const start = async (): Promise<void> => {
   const requestedLab = new URLSearchParams(window.location.search).get('lab');
 
   if (requestedLab === 'catalog') {
+    document.body.dataset.lab = 'catalog';
     new LaboratoryCatalog(app).start();
     return;
   }
 
   const lab = getLab(requestedLab ?? 'orbital');
   if (lab === undefined) {
+    document.body.dataset.lab = 'catalog';
     new LaboratoryCatalog(app).start();
     return;
   }
+
+  document.body.dataset.lab = lab.id;
 
   if (lab.id === 'orbital') {
     const { OrbitalLab } = await import('./simulations/orbital-lab/orbital-lab');

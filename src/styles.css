@@ -27,6 +27,16 @@ body {
   background: #010308;
 }
 
+body[data-lab="catalog"] {
+  overflow-y: auto;
+}
+
+@media (max-width: 700px) {
+  body[data-lab="quasar"] {
+    overflow-y: auto;
+  }
+}
+
 button,
 select,
 input {
