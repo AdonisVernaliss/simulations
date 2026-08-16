@@ -5,6 +5,7 @@ import {
   AU_SOLAR_MASS_TIME_UNIT_SECONDS,
   presets,
 } from '../src/simulations/orbital-lab/model/presets';
+import { calculateTidalStressRatio } from '../src/simulations/orbital-lab/model/tidal-stress';
 
 describe('orbital presets', () => {
   it('use unique preset and body identifiers', () => {
@@ -103,24 +104,34 @@ describe('orbital presets', () => {
     expect(Math.hypot(...simulation.getDiagnostics().linearMomentum)).toBeLessThan(1e-12);
   });
 
-  it('includes a high-energy collision that creates resolved remnants', () => {
-    const preset = presets.find((candidate) => candidate.id === 'planetary-disruption');
+  it('includes a close encounter that reaches strong black-hole tides', () => {
+    const preset = presets.find((candidate) => candidate.id === 'tidal-encounter');
     expect(preset).toBeDefined();
-    const simulation = new NBodySimulation(preset!.bodies, {
-      collisions: true,
-      softening: 0.0001,
-    });
+    const simulation = new NBodySimulation(preset!.bodies, { softening: 0.0001 });
+    const blackHoleIndex = simulation.kinds.indexOf('black-hole');
+    const starIndex = simulation.kinds.indexOf('star');
+    let strongestRatio = 0;
 
-    for (
-      let index = 0;
-      index < 8_000 && simulation.lastCollisionEvent === undefined;
-      index += 1
-    ) {
+    for (let index = 0; index < 4_000; index += 1) {
       simulation.step(preset!.fixedStep);
+      const blackHoleOffset = blackHoleIndex * 3;
+      const starOffset = starIndex * 3;
+      const separation = Math.hypot(
+        simulation.positions[blackHoleOffset]! - simulation.positions[starOffset]!,
+        simulation.positions[blackHoleOffset + 1]! - simulation.positions[starOffset + 1]!,
+        simulation.positions[blackHoleOffset + 2]! - simulation.positions[starOffset + 2]!,
+      );
+      strongestRatio = Math.max(
+        strongestRatio,
+        calculateTidalStressRatio(
+          simulation.masses[blackHoleIndex]!,
+          simulation.masses[starIndex]!,
+          simulation.radii[starIndex]!,
+          separation,
+        ),
+      );
     }
 
-    expect(simulation.lastCollisionEvent?.outcome).toBe('disruption');
-    expect(simulation.count).toBeGreaterThan(2);
-    expect(Array.from(simulation.masses).reduce((sum, mass) => sum + mass, 0)).toBeCloseTo(2, 10);
+    expect(strongestRatio).toBeGreaterThan(0.8);
   });
 });

@@ -26,7 +26,7 @@ type OrbitalExperimentId =
   | 'quasar-system'
   | 'pulsar-system'
   | 'neutron-star-binary'
-  | 'planetary-disruption'
+  | 'tidal-encounter'
   | 'binary-stars'
   | 'figure-eight'
   | 'head-on-collision';
@@ -82,11 +82,11 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     observation: 'No. Both objects carry mass and both accelerate; relativistic inspiral is deliberately outside this Newtonian scene.',
   },
   {
-    id: 'planetary-disruption',
-    label: 'Planet disruption',
-    title: 'Impact energy changes the outcome regime',
-    question: 'What changes when a collision exceeds the catastrophic disruption threshold?',
-    observation: 'Compare this with accretion: the largest remnant and debris continue as gravitating bodies.',
+    id: 'tidal-encounter',
+    label: 'Tidal encounter',
+    title: 'A gravity gradient stretches a star',
+    question: 'When does a star stop behaving like one rigid sphere?',
+    observation: 'Stretching grows with 2MᴮᴴR³/(md³). Near unity, the leading tidal gradient rivals the star’s own surface gravity.',
   },
   {
     id: 'binary-stars',
