@@ -63,7 +63,6 @@ describe('gravity solvers', () => {
     computeDirectAccelerations(positions, masses, 1, 0.001, exact);
     const solver = new AdaptiveGravitySolver({
       directThreshold: 0,
-      openingAngle: 0.32,
     });
     solver.compute(positions, masses, 1, 0.001, approximate);
 

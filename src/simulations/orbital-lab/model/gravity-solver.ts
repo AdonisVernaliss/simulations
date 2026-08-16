@@ -6,8 +6,8 @@ export interface AdaptiveGravitySolverOptions {
 }
 
 const COMPONENTS_PER_BODY = 3;
-const DEFAULT_DIRECT_THRESHOLD = 384;
-const DEFAULT_OPENING_ANGLE = 0.32;
+const DEFAULT_DIRECT_THRESHOLD = 2_048;
+const DEFAULT_OPENING_ANGLE = 0.5;
 const LEAF_CAPACITY = 4;
 const MAXIMUM_TREE_DEPTH = 24;
 
