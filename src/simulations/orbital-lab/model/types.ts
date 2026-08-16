@@ -24,6 +24,7 @@ export type BodySurface =
   | 'quasar'
   | 'neutron-star'
   | 'pulsar'
+  | 'molten'
   | 'procedural'
   | 'none';
 

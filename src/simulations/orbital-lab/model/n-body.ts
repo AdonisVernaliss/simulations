@@ -10,7 +10,6 @@ import type {
 import { analyzeCollision, type CollisionAnalysis } from './collision-model';
 
 const COMPONENTS_PER_BODY = 3;
-const MAXIMUM_INTERACTIVE_BODIES = 128;
 
 const assertFiniteVector = (value: Vector3Tuple, label: string): void => {
   if (value.some((component) => !Number.isFinite(component))) {
@@ -366,8 +365,11 @@ export class NBodySimulation {
           this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
           this.recordCollision(participants, analysis, 0);
         } else if (analysis.outcome === 'disruption') {
-          const fragmentCount = this.disruptPair(bodyIndex, otherIndex, analysis);
-          this.recordCollision(participants, analysis, fragmentCount);
+          // A credible disruptive impact requires a hydrodynamic/SPH solver. Keep
+          // the two resolved masses and separate them instead of inventing a
+          // handful of spherical fragments that would be mistaken for physics.
+          this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
+          this.recordCollision(participants, analysis, 0);
         } else {
           this.recordCollision(participants, analysis, 1);
           this.mergePair(bodyIndex, otherIndex, analysis);
@@ -412,9 +414,17 @@ export class NBodySimulation {
 
     const mergedBody: BodyDefinition = {
       id: `${this.idsData[firstIndex]}+${this.idsData[secondIndex]}`,
-      name: `${this.namesData[firstIndex]} + ${this.namesData[secondIndex]}`,
+      name:
+        mergedKind === 'black-hole'
+          ? `${this.namesData[firstIndex]} + ${this.namesData[secondIndex]}`
+          : 'Hot impact remnant',
       kind: mergedKind,
-      surface: mergedKind === 'black-hole' ? 'none' : this.surfacesData[dominantIndex]!,
+      surface:
+        mergedKind === 'black-hole'
+          ? 'none'
+          : mergedKind === 'terrestrial' || mergedKind === 'rocky' || mergedKind === 'generic'
+            ? 'molten'
+            : this.surfacesData[dominantIndex]!,
       mass: finalMass,
       radius:
         mergedKind === 'black-hole'
@@ -425,7 +435,10 @@ export class NBodySimulation {
       renderRadius: Math.cbrt(
         this.renderRadiusData[firstIndex]! ** 3 + this.renderRadiusData[secondIndex]! ** 3,
       ),
-      color: this.colorsData[dominantIndex]!,
+      color:
+        mergedKind === 'terrestrial' || mergedKind === 'rocky' || mergedKind === 'generic'
+          ? '#ff7a32'
+          : this.colorsData[dominantIndex]!,
       axialTilt: this.axialTiltData[dominantIndex]!,
       rotationRate: this.rotationRateData[dominantIndex]!,
       position: [mergedPosition[0]!, mergedPosition[1]!, mergedPosition[2]!],
@@ -515,156 +528,6 @@ export class NBodySimulation {
         normal[component]! * overlap * (firstMass / totalMass);
     }
     this.computeAccelerations(this.accelerationData);
-  }
-
-  private disruptPair(
-    firstIndex: number,
-    secondIndex: number,
-    analysis: CollisionAnalysis,
-  ): number {
-    const firstMass = this.massData[firstIndex]!;
-    const secondMass = this.massData[secondIndex]!;
-    const totalMass = firstMass + secondMass;
-    const firstOffset = firstIndex * COMPONENTS_PER_BODY;
-    const secondOffset = secondIndex * COMPONENTS_PER_BODY;
-    const centerPosition: number[] = [];
-    const centerVelocity: number[] = [];
-
-    for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
-      centerPosition.push(
-        (this.positionData[firstOffset + component]! * firstMass +
-          this.positionData[secondOffset + component]! * secondMass) /
-          totalMass,
-      );
-      centerVelocity.push(
-        (this.velocityData[firstOffset + component]! * firstMass +
-          this.velocityData[secondOffset + component]! * secondMass) /
-          totalMass,
-      );
-    }
-
-    const largestFraction = Math.max(0.1, Math.min(0.5, 1 - 0.5 * analysis.energyRatio));
-    const largestMass = totalMass * largestFraction;
-    const availableSlots =
-      MAXIMUM_INTERACTIVE_BODIES - (this.count - 2) - 1;
-    const debrisCount = Math.max(1, Math.min(8, availableSlots));
-    const debrisWeights = Array.from(
-      { length: debrisCount },
-      (_, fragmentIndex) => 1 / (fragmentIndex + 1) ** 0.72,
-    );
-    const debrisWeightTotal = debrisWeights.reduce((sum, weight) => sum + weight, 0);
-    const debrisMasses = debrisWeights.map(
-      (weight) => ((totalMass - largestMass) * weight) / debrisWeightTotal,
-    );
-    const combinedRadius = Math.cbrt(
-      this.radiusData[firstIndex]! ** 3 + this.radiusData[secondIndex]! ** 3,
-    );
-    const combinedRenderRadius = Math.cbrt(
-      this.renderRadiusData[firstIndex]! ** 3 + this.renderRadiusData[secondIndex]! ** 3,
-    );
-    const dominantIndex = firstMass >= secondMass ? firstIndex : secondIndex;
-    const eventSequence = this.collisionSequence + 1;
-    const ejectionSpeed = Math.max(
-      analysis.mutualEscapeSpeed * 0.32,
-      analysis.impactSpeed * 0.12,
-    );
-    const separation = combinedRadius * 3.2;
-    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
-    const fragments = debrisMasses.map((mass, fragmentIndex) => {
-      const variation =
-        Math.sin((fragmentIndex + 1) * 91.733 + eventSequence * 17.17) * 43_758.5453;
-      const random = variation - Math.floor(variation);
-      const angle = fragmentIndex * goldenAngle + random * 0.42;
-      const rawDirection: Vector3Tuple = [
-        Math.cos(angle),
-        Math.sin(angle),
-        Math.sin(angle * 1.73 + 0.4) * 0.28,
-      ];
-      const directionLength = Math.hypot(...rawDirection);
-      const direction = rawDirection.map(
-        (component) => component / directionLength,
-      ) as unknown as Vector3Tuple;
-      const radialScale = 0.78 + random * 0.62;
-      const speedScale = 0.72 + random * 0.58;
-      return {
-        mass,
-        angle,
-        offset: direction.map(
-          (component) => component * separation * radialScale,
-        ) as unknown as Vector3Tuple,
-        ejection: direction.map(
-          (component) => component * ejectionSpeed * speedScale,
-        ) as unknown as Vector3Tuple,
-      };
-    });
-    const meanOffset = [0, 0, 0];
-    const meanEjection = [0, 0, 0];
-
-    for (const fragment of fragments) {
-      for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
-        meanOffset[component] =
-          meanOffset[component]! + fragment.offset[component]! * fragment.mass / totalMass;
-        meanEjection[component] =
-          meanEjection[component]! + fragment.ejection[component]! * fragment.mass / totalMass;
-      }
-    }
-
-    const remnants: BodyDefinition[] = [
-      {
-        id: `remnant-${eventSequence}`,
-        name: 'Largest remnant',
-        kind: this.kindsData[dominantIndex]!,
-        surface: 'procedural',
-        mass: largestMass,
-        radius: combinedRadius * Math.cbrt(largestFraction),
-        renderRadius: combinedRenderRadius * Math.cbrt(largestFraction),
-        color: this.colorsData[dominantIndex]!,
-        axialTilt: this.axialTiltData[dominantIndex]!,
-        rotationRate: this.rotationRateData[dominantIndex]!,
-        position: [
-          centerPosition[0]! - meanOffset[0]!,
-          centerPosition[1]! - meanOffset[1]!,
-          centerPosition[2]! - meanOffset[2]!,
-        ],
-        velocity: [
-          centerVelocity[0]! - meanEjection[0]!,
-          centerVelocity[1]! - meanEjection[1]!,
-          centerVelocity[2]! - meanEjection[2]!,
-        ],
-      },
-    ];
-
-    fragments.forEach((fragment, fragmentIndex) => {
-      const fragmentFraction = fragment.mass / totalMass;
-      remnants.push({
-        id: `fragment-${eventSequence}-${fragmentIndex + 1}`,
-        name: `Fragment ${fragmentIndex + 1}`,
-        kind: 'rocky',
-        surface: 'procedural',
-        mass: fragment.mass,
-        radius: combinedRadius * Math.cbrt(fragmentFraction),
-        renderRadius: combinedRenderRadius * Math.cbrt(fragmentFraction) * 0.82,
-        color: this.colorsData[fragmentIndex % 2 === 0 ? firstIndex : secondIndex]!,
-        axialTilt: fragment.angle,
-        rotationRate: (fragmentIndex % 2 === 0 ? 1 : -1) * (2.4 + fragmentIndex * 0.31),
-        position: [
-          centerPosition[0]! + fragment.offset[0] - meanOffset[0]!,
-          centerPosition[1]! + fragment.offset[1] - meanOffset[1]!,
-          centerPosition[2]! + fragment.offset[2] - meanOffset[2]!,
-        ],
-        velocity: [
-          centerVelocity[0]! + fragment.ejection[0] - meanEjection[0]!,
-          centerVelocity[1]! + fragment.ejection[1] - meanEjection[1]!,
-          centerVelocity[2]! + fragment.ejection[2] - meanEjection[2]!,
-        ],
-      });
-    });
-
-    const bodies = this.createBodyDefinitions().filter(
-      (_, bodyIndex) => bodyIndex !== firstIndex && bodyIndex !== secondIndex,
-    );
-    this.replaceBodies([...bodies, ...remnants]);
-    return remnants.length;
   }
 
   private recordCollision(

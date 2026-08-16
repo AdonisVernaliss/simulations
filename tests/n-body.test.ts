@@ -139,7 +139,7 @@ describe('NBodySimulation', () => {
     expect(simulation.rotationRates[0]).toBeCloseTo(6.3, 12);
   });
 
-  it('preserves the dominant appearance when ordinary bodies merge', () => {
+  it('marks an ordinary merged body as a hot impact remnant', () => {
     const simulation = new NBodySimulation(
       [
         {
@@ -174,7 +174,7 @@ describe('NBodySimulation', () => {
 
     expect(simulation.count).toBe(1);
     expect(simulation.kinds[0]).toBe('terrestrial');
-    expect(simulation.surfaces[0]).toBe('earth');
+    expect(simulation.surfaces[0]).toBe('molten');
     expect(simulation.renderRadii[0]).toBeCloseTo(Math.cbrt(0.3 ** 3 + 0.15 ** 3), 12);
   });
 
@@ -230,7 +230,7 @@ describe('NBodySimulation', () => {
     expect(Math.hypot(...simulation.getDiagnostics().linearMomentum)).toBeLessThan(1e-12);
   });
 
-  it('creates mass- and momentum-conserving remnants after catastrophic disruption', () => {
+  it('does not invent resolved fragments without hydrodynamics', () => {
     const simulation = new NBodySimulation(
       [
         {
@@ -262,7 +262,8 @@ describe('NBodySimulation', () => {
     simulation.step(0.0001);
 
     expect(simulation.lastCollisionEvent?.outcome).toBe('disruption');
-    expect(simulation.count).toBeGreaterThan(2);
+    expect(simulation.count).toBe(2);
+    expect(simulation.lastCollisionEvent?.fragmentCount).toBe(0);
     expect(Array.from(simulation.masses).reduce((sum, mass) => sum + mass, 0)).toBeCloseTo(2, 12);
     expect(Math.hypot(...simulation.getDiagnostics().linearMomentum)).toBeLessThan(1e-10);
   });
