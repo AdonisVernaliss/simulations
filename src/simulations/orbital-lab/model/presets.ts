@@ -6,12 +6,18 @@ export interface SimulationPreset {
   readonly summary: string;
   readonly bodies: readonly BodyDefinition[];
   readonly fixedStep: number;
-  readonly timeScale: number;
+  /** Physical seconds represented by one integration-time unit. */
+  readonly secondsPerTimeUnit: number;
+  /** Physical seconds advanced for each real second at startup. */
+  readonly defaultTimeWarp: number;
   readonly cameraDistance: number;
   readonly trailSpan: number;
 }
 
 const body = (definition: BodyDefinition): BodyDefinition => definition;
+
+// sqrt(AU^3 / GM_sun): the natural time unit when G = M_sun = AU = 1.
+export const AU_SOLAR_MASS_TIME_UNIT_SECONDS = 5_022_642.891_366_037;
 
 const barycentricBodies = (definitions: readonly BodyDefinition[]): BodyDefinition[] => {
   const totalMass = definitions.reduce((sum, definition) => sum + definition.mass, 0);
@@ -48,7 +54,8 @@ export const presets = [
     name: 'Idealized solar system',
     summary: 'JPL-derived mass ratios and orbital scales in a circular, coplanar model.',
     fixedStep: 0.0025,
-    timeScale: 0.42,
+    secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+    defaultTimeWarp: 1_000_000,
     cameraDistance: 42,
     trailSpan: 72,
     bodies: [
@@ -185,7 +192,8 @@ export const presets = [
     name: 'Black hole flyby',
     summary: 'A compact object crosses a young planetary system and exchanges energy with every body.',
     fixedStep: 0.001,
-    timeScale: 0.52,
+    secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+    defaultTimeWarp: 1_000_000,
     cameraDistance: 8.5,
     trailSpan: 16,
     bodies: barycentricBodies([
@@ -252,7 +260,8 @@ export const presets = [
     name: 'Black hole and star',
     summary: 'A star and a black hole orbit their barycentre while two worlds respond to the combined field.',
     fixedStep: 0.001,
-    timeScale: 0.48,
+    secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+    defaultTimeWarp: 1_000_000,
     cameraDistance: 10,
     trailSpan: 20,
     bodies: barycentricBodies([
@@ -319,7 +328,8 @@ export const presets = [
     name: 'Black hole merger',
     summary: 'Two horizons fall together; the remnant retains momentum while an estimated mass fraction leaves as gravitational radiation.',
     fixedStep: 0.0005,
-    timeScale: 0.38,
+    secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+    defaultTimeWarp: 1_000_000,
     cameraDistance: 4.6,
     trailSpan: 8,
     bodies: barycentricBodies([
@@ -358,7 +368,8 @@ export const presets = [
     name: 'Planetary disruption',
     summary: 'A high-energy impact crosses the gravity-regime disruption threshold and produces resolved remnants.',
     fixedStep: 0.0005,
-    timeScale: 0.24,
+    secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+    defaultTimeWarp: 1_000_000,
     cameraDistance: 4.4,
     trailSpan: 7,
     bodies: barycentricBodies([
@@ -397,7 +408,8 @@ export const presets = [
     name: 'Binary stars',
     summary: 'Two equal stars orbit their shared center of mass.',
     fixedStep: 0.0025,
-    timeScale: 0.7,
+    secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+    defaultTimeWarp: 1_000_000,
     cameraDistance: 5.5,
     trailSpan: 12,
     bodies: [
@@ -432,7 +444,8 @@ export const presets = [
     name: 'Figure eight',
     summary: 'Three identical bodies trace a stable choreographic orbit.',
     fixedStep: 0.0015,
-    timeScale: 0.55,
+    secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+    defaultTimeWarp: 1_000_000,
     cameraDistance: 4.8,
     trailSpan: 10,
     bodies: [
@@ -479,7 +492,8 @@ export const presets = [
     name: 'Planetary accretion',
     summary: 'Two equal worlds meet below the catastrophic threshold and form one volume-equivalent remnant.',
     fixedStep: 0.0015,
-    timeScale: 0.6,
+    secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+    defaultTimeWarp: 1_000_000,
     cameraDistance: 4.2,
     trailSpan: 8,
     bodies: [

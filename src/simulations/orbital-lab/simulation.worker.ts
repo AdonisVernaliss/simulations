@@ -17,7 +17,7 @@ let activePreset: SimulationPreset | undefined;
 let simulation: NBodySimulation | undefined;
 let clock: FixedStepClock | undefined;
 let paused = false;
-let timeScaleMultiplier = 1;
+let timeWarp = 1;
 
 const createPositionBuffer = (
   source: Float64Array,
@@ -89,7 +89,7 @@ const initialize = (session: number, presetId: string): void => {
   });
   clock = new FixedStepClock(activePreset.fixedStep, 16);
   paused = false;
-  timeScaleMultiplier = 1;
+  timeWarp = activePreset.defaultTimeWarp;
   postInitialized();
 };
 
@@ -104,11 +104,20 @@ const advance = (request: AdvanceRequest): void => {
   }
 
   const previousBodyCount = simulation.count;
-  const result = clock.advance(
-    Math.min(request.elapsedSeconds, 0.25),
-    paused ? 0 : activePreset.timeScale * timeScaleMultiplier,
-    (deltaTime) => simulation?.step(deltaTime),
-  );
+  const elapsedSeconds = Math.min(request.elapsedSeconds, 0.25);
+  const modelUnitsPerSecond = paused ? 0 : timeWarp / activePreset.secondsPerTimeUnit;
+  const requestedModelTime = elapsedSeconds * modelUnitsPerSecond;
+  const result =
+    requestedModelTime > 0 && requestedModelTime < activePreset.fixedStep
+      ? (() => {
+          simulation?.step(requestedModelTime);
+          return { droppedTime: 0 };
+        })()
+      : clock.advance(
+          elapsedSeconds,
+          modelUnitsPerSecond,
+          (deltaTime) => simulation?.step(deltaTime),
+        );
 
   if (simulation.count !== previousBodyCount) {
     postInitialized(request.positionBuffer);
@@ -162,7 +171,8 @@ workerScope.onmessage = (event: MessageEvent<WorkerRequest>): void => {
           Number.isFinite(request.multiplier) &&
           request.multiplier >= 0
         ) {
-          timeScaleMultiplier = request.multiplier;
+          timeWarp = request.multiplier;
+          clock?.reset();
         }
         break;
     }

@@ -103,6 +103,14 @@ const formatNumber = (value: number, maximumFractionDigits = 2): string =>
 const formatMeasurement = (value: number): string =>
   Math.abs(value) < 0.001 && value !== 0 ? value.toExponential(3) : formatNumber(value, 4);
 
+const formatDuration = (seconds: number): string => {
+  if (seconds < 60) return `${formatNumber(seconds, 1)} s`;
+  if (seconds < 3_600) return `${formatNumber(seconds / 60, 2)} min`;
+  if (seconds < 86_400) return `${formatNumber(seconds / 3_600, 2)} h`;
+  if (seconds < 31_557_600) return `${formatNumber(seconds / 86_400, 2)} d`;
+  return `${formatNumber(seconds / 31_557_600, 3)} yr`;
+};
+
 export class OrbitalLab {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: OrbitalRenderer;
@@ -141,6 +149,7 @@ export class OrbitalLab {
   private readonly selectedRenderRadiusElement: HTMLElement;
   private readonly selectedPositionElement: HTMLElement;
   private readonly selectedPhysicsElement: HTMLElement;
+  private readonly selectedRotationElement: HTMLElement;
   private readonly focusBodyButton: HTMLButtonElement;
   private readonly closeInspectorButton: HTMLButtonElement;
   private readonly experiments: GuidedExperiments<OrbitalExperimentId>;
@@ -152,6 +161,7 @@ export class OrbitalLab {
   private framesPerSecond = 60;
   private initialEnergy = 0;
   private activePresetId: string = presets[0].id;
+  private currentTimeWarp: number = presets[0].defaultTimeWarp;
   private paused = false;
   private qualityMode: QualityMode = 'auto';
   private activeQuality: QualityLevel = 'balanced';
@@ -203,6 +213,7 @@ export class OrbitalLab {
     this.selectedRenderRadiusElement = requireElement(root, '[data-selected-render-radius]');
     this.selectedPositionElement = requireElement(root, '[data-selected-position]');
     this.selectedPhysicsElement = requireElement(root, '[data-selected-physics]');
+    this.selectedRotationElement = requireElement(root, '[data-selected-rotation]');
     this.focusBodyButton = requireElement(root, '[data-focus-body]');
     this.closeInspectorButton = requireElement(root, '[data-close-inspector]');
 
@@ -280,6 +291,8 @@ export class OrbitalLab {
     this.bodyCountElement.textContent = String(details.bodies.length);
     this.bodyCount = details.bodies.length;
     this.presetSelect.value = details.presetId;
+    this.speedSelect.value = String(this.currentTimeWarp);
+    this.worker.setTimeScale(this.currentTimeWarp);
     this.renderBodyList();
     this.updateMetrics(frame, true);
     this.updateCollisionNotice(frame.collision);
@@ -308,7 +321,9 @@ export class OrbitalLab {
       (Math.abs(frame.diagnostics.totalEnergy - this.initialEnergy) / energyDenominator) * 100;
     const momentum = Math.hypot(...frame.diagnostics.linearMomentum);
 
-    this.timeElement.textContent = formatNumber(frame.time, 2);
+    this.timeElement.textContent = formatDuration(
+      frame.time * getPreset(this.activePresetId).secondsPerTimeUnit,
+    );
     this.fpsElement.textContent = formatNumber(this.framesPerSecond, 0);
     this.energyDriftElement.textContent = `${energyDrift.toExponential(1)}%`;
     this.momentumElement.textContent = momentum.toExponential(2);
@@ -356,6 +371,7 @@ export class OrbitalLab {
   private bindControls(): void {
     this.presetSelect.addEventListener('change', () => {
       this.activePresetId = this.presetSelect.value;
+      this.currentTimeWarp = getPreset(this.activePresetId).defaultTimeWarp;
       this.experiments.activate(this.activePresetId as OrbitalExperimentId, false);
       this.setStatus('Loading model', 'loading');
       this.resetCollisionNotice();
@@ -467,7 +483,8 @@ export class OrbitalLab {
     });
 
     this.speedSelect.addEventListener('change', () => {
-      this.worker.setTimeScale(Number(this.speedSelect.value));
+      this.currentTimeWarp = Number(this.speedSelect.value);
+      this.worker.setTimeScale(this.currentTimeWarp);
     });
 
     this.qualitySelect.addEventListener('change', () => {
@@ -514,6 +531,7 @@ export class OrbitalLab {
 
   private applyExperiment(id: OrbitalExperimentId): void {
     this.activePresetId = id;
+    this.currentTimeWarp = getPreset(id).defaultTimeWarp;
     this.presetSelect.value = id;
     this.setStatus('Loading experiment', 'loading');
     this.resetCollisionNotice();
@@ -607,6 +625,14 @@ export class OrbitalLab {
         4,
       );
       this.selectedPositionElement.textContent = 'Updating…';
+      const rotationPeriod =
+        selection.body.rotationRate === 0
+          ? 'Not specified'
+          : `${selection.body.rotationRate < 0 ? 'Retrograde · ' : ''}${formatDuration(
+              (Math.PI * 2 * getPreset(this.activePresetId).secondsPerTimeUnit) /
+                Math.abs(selection.body.rotationRate),
+            )}`;
+      this.selectedRotationElement.textContent = rotationPeriod;
       this.selectedPhysicsElement.textContent =
         selection.body.kind === 'black-hole'
           ? 'Black centre: observable shadow. Fine rim: photon ring. Broad band and upper/lower arcs: direct and lensed accretion disk. The event horizon lies inside the shadow.'
@@ -720,8 +746,8 @@ export class OrbitalLab {
 
           <aside class="metrics" aria-label="Live physical diagnostics">
             <div class="metric metric-primary">
-              <span>System time</span>
-              <strong><span data-time>0.00</span> <small>units</small></strong>
+              <span>Physical elapsed time</span>
+              <strong data-time>0.0 s</strong>
             </div>
             <div class="metric-strip">
               <div class="metric">
@@ -783,6 +809,10 @@ export class OrbitalLab {
                 <dt>Position x, y, z</dt>
                 <dd data-selected-position>—</dd>
               </div>
+              <div>
+                <dt>Sidereal rotation</dt>
+                <dd data-selected-rotation>—</dd>
+              </div>
             </dl>
             <p class="inspector-physics" data-selected-physics></p>
             <button class="button button-primary inspector-action" type="button" data-focus-body>
@@ -805,11 +835,13 @@ export class OrbitalLab {
             <label class="field">
               <span>Speed</span>
               <select data-speed aria-label="Simulation speed">
-                <option value="0.25">0.25×</option>
-                <option value="0.5">0.5×</option>
-                <option value="1" selected>1×</option>
-                <option value="2">2×</option>
-                <option value="4">4×</option>
+                <option value="1">Real time · 1×</option>
+                <option value="60">1 min/s · 60×</option>
+                <option value="1000">1,000×</option>
+                <option value="3600">1 h/s · 3,600×</option>
+                <option value="86400">1 day/s · 86,400×</option>
+                <option value="1000000" selected>11.6 days/s · 10⁶×</option>
+                <option value="10000000">115.7 days/s · 10⁷×</option>
               </select>
             </label>
 
