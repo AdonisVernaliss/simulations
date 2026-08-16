@@ -13,10 +13,14 @@ export const WIEN_DISPLACEMENT_CONSTANT = 2.897_771_955e-3;
 export const INNER_RADIUS_RG = 6;
 export const THIN_DISK_EFFICIENCY = 1 / 12;
 
-export const getEddingtonLuminosity = (solarMasses: number): number => {
+const validateSolarMasses = (solarMasses: number): void => {
   if (!Number.isFinite(solarMasses) || solarMasses <= 0) {
     throw new RangeError('Black-hole mass must be finite and positive.');
   }
+};
+
+export const getEddingtonLuminosity = (solarMasses: number): number => {
+  validateSolarMasses(solarMasses);
   const gravitationalParameter = NOMINAL_SOLAR_MASS_PARAMETER * solarMasses;
   return (
     (4 * Math.PI * gravitationalParameter * PROTON_MASS_KG * SPEED_OF_LIGHT) /
@@ -39,6 +43,7 @@ export const getDiskFlux = (
   accretionRateKgPerSecond: number,
   radiusRg: number,
 ): number => {
+  validateSolarMasses(solarMasses);
   if (!Number.isFinite(accretionRateKgPerSecond) || accretionRateKgPerSecond <= 0) {
     throw new RangeError('Accretion rate must be finite and positive.');
   }

@@ -45,4 +45,9 @@ describe('thin accretion disk baseline', () => {
     const luminosity = accretionRate * 299_792_458 ** 2 * THIN_DISK_EFFICIENCY;
     expect(luminosity / (getEddingtonLuminosity(mass) * ratio)).toBeCloseTo(1, 12);
   });
+
+  it('rejects non-physical mass inputs in direct flux calculations', () => {
+    expect(() => getDiskFlux(0, 1e20, 12)).toThrow(RangeError);
+    expect(() => getDiskFlux(-1e8, 1e20, 12)).toThrow(RangeError);
+  });
 });
