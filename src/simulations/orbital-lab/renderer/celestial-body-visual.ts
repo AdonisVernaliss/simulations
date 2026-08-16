@@ -322,6 +322,7 @@ export class CelestialMaterialLibrary {
 
 export class CelestialBodyVisual {
   readonly root = new Group();
+  readonly overlay = new Group();
   readonly pickMesh: Mesh<SphereGeometry, Material>;
 
   private readonly oriented = new Group();
@@ -351,6 +352,7 @@ export class CelestialBodyVisual {
     this.oriented.add(this.pickMesh);
     this.root.add(this.oriented);
     this.root.scale.setScalar(body.renderRadius);
+    this.overlay.scale.setScalar(body.renderRadius);
 
     if (body.surface === 'earth') {
       this.atmosphereMaterial = new MeshBasicMaterial({
@@ -393,7 +395,7 @@ export class CelestialBodyVisual {
       });
       this.blackHoleAppearance = new Mesh(new PlaneGeometry(8, 8), appearanceMaterial);
       this.blackHoleAppearance.renderOrder = 3;
-      this.root.add(this.blackHoleAppearance);
+      this.overlay.add(this.blackHoleAppearance);
 
       if (body.surface === 'quasar') {
         this.addQuasarJets();
@@ -424,6 +426,7 @@ export class CelestialBodyVisual {
 
   update(position: Vector3, time: number): void {
     this.root.position.copy(position);
+    this.overlay.position.copy(position);
     const rotationPhase = (time * this.body.rotationRate) % (Math.PI * 2);
     this.pickMesh.rotation.y = rotationPhase;
     if (this.compactField !== undefined) {
@@ -573,6 +576,6 @@ export class CelestialBodyVisual {
       jets.add(jet);
       this.decorativeMeshes.push(jet);
     }
-    this.root.add(jets);
+    this.overlay.add(jets);
   }
 }

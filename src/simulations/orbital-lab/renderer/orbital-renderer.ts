@@ -138,6 +138,7 @@ export class OrbitalRenderer {
   private readonly lensing = new GravitationalLensing();
   private readonly gravityField = new GravityFieldVisual();
   private readonly scene = new Scene();
+  private readonly compactObjectOverlay = new Scene();
   private readonly camera = new PerspectiveCamera(42, 1, 0.01, 250);
   private readonly controls: OrbitControls;
   private readonly resizeObserver: ResizeObserver;
@@ -246,6 +247,7 @@ export class OrbitalRenderer {
         this.glowTexture,
       );
       this.scene.add(visual.root);
+      this.compactObjectOverlay.add(visual.overlay);
       return visual;
     });
 
@@ -310,6 +312,10 @@ export class OrbitalRenderer {
     this.controls.update();
     this.bodyVisuals.forEach((visual) => visual.faceCamera(this.camera.position));
     this.composer.render();
+    this.renderer.autoClear = false;
+    this.renderer.clearDepth();
+    this.renderer.render(this.compactObjectOverlay, this.camera);
+    this.renderer.autoClear = true;
   }
 
   setQuality(quality: QualityLevel): void {
@@ -420,6 +426,7 @@ export class OrbitalRenderer {
   private disposeBodies(): void {
     for (const visual of this.bodyVisuals) {
       this.scene.remove(visual.root);
+      this.compactObjectOverlay.remove(visual.overlay);
       visual.dispose();
     }
     this.bodyVisuals = [];

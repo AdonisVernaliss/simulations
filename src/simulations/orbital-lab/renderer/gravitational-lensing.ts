@@ -13,7 +13,6 @@ const LENSING_SHADER = {
     uLensCenters: { value: [new Vector2(-2, -2), new Vector2(-2, -2)] },
     uLensStrengths: { value: new Vector2() },
     uShadowRadii: { value: new Vector2() },
-    uAppearanceRadii: { value: new Vector2() },
     uEnabled: { value: new Vector2() },
   },
   vertexShader: `
@@ -30,7 +29,6 @@ const LENSING_SHADER = {
     uniform vec2 uLensCenters[2];
     uniform vec2 uLensStrengths;
     uniform vec2 uShadowRadii;
-    uniform vec2 uAppearanceRadii;
     uniform vec2 uEnabled;
     varying vec2 vUv;
 
@@ -53,14 +51,10 @@ const LENSING_SHADER = {
     void main() {
       vec2 sampleUv = mapThroughLens(vUv, uLensCenters[0], uLensStrengths.x, uEnabled.x);
       sampleUv = mapThroughLens(sampleUv, uLensCenters[1], uLensStrengths.y, uEnabled.y);
-      vec3 lensedColor = texture2D(tDiffuse, clamp(sampleUv, 0.0, 1.0)).rgb;
-      vec3 directColor = texture2D(tDiffuse, vUv).rgb;
+      vec3 color = texture2D(tDiffuse, clamp(sampleUv, 0.0, 1.0)).rgb;
 
       float radius0 = lensRadius(vUv, uLensCenters[0]);
       float radius1 = lensRadius(vUv, uLensCenters[1]);
-      float preserve0 = (1.0 - smoothstep(uAppearanceRadii.x * 0.88, uAppearanceRadii.x, radius0)) * uEnabled.x;
-      float preserve1 = (1.0 - smoothstep(uAppearanceRadii.y * 0.88, uAppearanceRadii.y, radius1)) * uEnabled.y;
-      vec3 color = mix(lensedColor, directColor, max(preserve0, preserve1));
 
       float shadow0 = 1.0 - step(radius0, uShadowRadii.x) * uEnabled.x;
       float shadow1 = 1.0 - step(radius1, uShadowRadii.y) * uEnabled.y;
@@ -116,12 +110,10 @@ export class GravitationalLensing {
     const centers = material.uniforms.uLensCenters?.value as Vector2[];
     const strengths = material.uniforms.uLensStrengths?.value as Vector2;
     const shadows = material.uniforms.uShadowRadii?.value as Vector2;
-    const appearances = material.uniforms.uAppearanceRadii?.value as Vector2;
     const enabled = material.uniforms.uEnabled?.value as Vector2;
     material.uniforms.uAspect!.value = camera.aspect;
     strengths.set(0, 0);
     shadows.set(0, 0);
-    appearances.set(0, 0);
     enabled.set(0, 0);
 
     for (let lensIndex = 0; lensIndex < MAXIMUM_LENSES; lensIndex += 1) {
@@ -158,10 +150,6 @@ export class GravitationalLensing {
       );
       strengths.setComponent(lensIndex, scales.strength);
       shadows.setComponent(lensIndex, Math.max(scales.visibleShadowRadius, 0.0015));
-      appearances.setComponent(
-        lensIndex,
-        Math.max(scales.visibleShadowRadius * 4.2, 0.0063),
-      );
       enabled.setComponent(lensIndex, 1);
     }
   }
