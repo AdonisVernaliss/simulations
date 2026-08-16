@@ -99,4 +99,11 @@ describe('gravity solvers', () => {
 
     expect(Array.from(target).every(Number.isFinite)).toBe(true);
   });
+
+  it('rejects invalid adaptive thresholds and opening angles', () => {
+    expect(() => new AdaptiveGravitySolver({ directThreshold: Number.NaN })).toThrow(
+      RangeError,
+    );
+    expect(() => new AdaptiveGravitySolver({ openingAngle: 0 })).toThrow(RangeError);
+  });
 });

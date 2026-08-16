@@ -13,10 +13,11 @@ export class CollisionBroadphase {
   private activeAlgorithm: CollisionBroadphaseAlgorithm = 'direct';
 
   constructor(options: CollisionBroadphaseOptions = {}) {
-    this.directThreshold = Math.max(
-      0,
-      Math.floor(options.directThreshold ?? DEFAULT_DIRECT_THRESHOLD),
-    );
+    const directThreshold = options.directThreshold ?? DEFAULT_DIRECT_THRESHOLD;
+    if (!Number.isFinite(directThreshold) || directThreshold < 0) {
+      throw new RangeError('Collision broad-phase threshold must be finite and non-negative');
+    }
+    this.directThreshold = Math.floor(directThreshold);
   }
 
   get algorithm(): CollisionBroadphaseAlgorithm {

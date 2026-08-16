@@ -71,4 +71,10 @@ describe('collision broad phase', () => {
     ).toBeUndefined();
     expect(broadphase.algorithm).toBe('direct');
   });
+
+  it('rejects an invalid crossover threshold', () => {
+    expect(() => new CollisionBroadphase({ directThreshold: Number.NaN })).toThrow(
+      RangeError,
+    );
+  });
 });
