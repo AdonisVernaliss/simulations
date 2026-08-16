@@ -9,10 +9,21 @@ The first simulation models gravitational systems with:
 - solar system, binary star, and figure-eight presets;
 - configurable mass, position, velocity, radius, and color for new bodies;
 - orbital trails and optional velocity vectors;
+- direct object selection, a live object inspector, and camera tracking;
+- procedural star fields, stellar glow, dynamic lighting, and planetary rings;
 - live energy, momentum, frame rate, and simulation-time diagnostics;
 - pause, reset, time-scale, camera, and rendering-quality controls;
 - perfectly inelastic collision merging;
 - automatic quality reduction when the frame budget is exceeded.
+
+### Interaction
+
+- Drag the scene to orbit the camera and scroll or pinch to zoom.
+- Click a body in the scene to inspect it.
+- Choose a named body from the lower object strip to select and follow it.
+- Use **System** to return to the full-system view.
+- Press `Space` to pause or resume and `Escape` to close the object inspector.
+- Use **Vectors** to display velocity direction and relative magnitude.
 
 ## Physical model
 
