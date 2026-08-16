@@ -29,6 +29,13 @@ describe('orbital presets', () => {
     }
   });
 
+  it('keep every current interactive preset on exact direct gravity', () => {
+    for (const preset of presets) {
+      const simulation = new NBodySimulation(preset.bodies);
+      expect(simulation.gravityAlgorithm).toBe('direct');
+    }
+  });
+
   it('start in a barycentric reference frame', () => {
     for (const preset of presets) {
       const diagnostics = new NBodySimulation(preset.bodies).getDiagnostics();
