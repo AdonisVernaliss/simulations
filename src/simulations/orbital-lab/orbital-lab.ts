@@ -385,7 +385,7 @@ export class OrbitalLab {
 
           <div class="scene-heading">
             <p class="eyebrow">Active system</p>
-            <h1 data-title>Solar system</h1>
+            <h1 data-title>Idealized solar system</h1>
             <p data-summary>Loading orbital model…</p>
           </div>
 
