@@ -1,0 +1,145 @@
+/// <reference lib="webworker" />
+
+import { FixedStepClock } from '../../core/fixed-step';
+import { NBodySimulation } from './model/n-body';
+import { getPreset, type SimulationPreset } from './model/presets';
+import type {
+  AdvanceRequest,
+  BodyMetadata,
+  WorkerRequest,
+  WorkerResponse,
+} from './worker-protocol';
+
+const workerScope = self as unknown as DedicatedWorkerGlobalScope;
+
+let activeSession = 0;
+let activePreset: SimulationPreset | undefined;
+let simulation: NBodySimulation | undefined;
+let clock: FixedStepClock | undefined;
+let paused = false;
+let timeScaleMultiplier = 1;
+
+const createPositionBuffer = (
+  source: Float64Array,
+  recycledBuffer?: ArrayBuffer,
+): ArrayBuffer => {
+  const requiredBytes = source.length * Float32Array.BYTES_PER_ELEMENT;
+  const buffer =
+    recycledBuffer?.byteLength === requiredBytes
+      ? recycledBuffer
+      : new ArrayBuffer(requiredBytes);
+  const output = new Float32Array(buffer);
+
+  for (let index = 0; index < source.length; index += 1) {
+    output[index] = source[index]!;
+  }
+
+  return buffer;
+};
+
+const postWithPositions = (response: WorkerResponse, positions: ArrayBuffer): void => {
+  workerScope.postMessage(response, [positions]);
+};
+
+const initialize = (session: number, presetId: string): void => {
+  activeSession = session;
+  activePreset = getPreset(presetId);
+  simulation = new NBodySimulation(activePreset.bodies, {
+    gravitationalConstant: 1,
+    softening: 0.0001,
+  });
+  clock = new FixedStepClock(activePreset.fixedStep, 16);
+  paused = false;
+  timeScaleMultiplier = 1;
+
+  const bodies: BodyMetadata[] = activePreset.bodies.map((body) => ({
+    id: body.id,
+    name: body.name,
+    color: body.color,
+    mass: body.mass,
+    radius: body.radius,
+  }));
+  const positions = createPositionBuffer(simulation.positions);
+
+  postWithPositions(
+    {
+      type: 'initialized',
+      session: activeSession,
+      presetId: activePreset.id,
+      presetName: activePreset.name,
+      presetSummary: activePreset.summary,
+      bodies,
+      time: simulation.time,
+      positions,
+      diagnostics: simulation.getDiagnostics(),
+    },
+    positions,
+  );
+};
+
+const advance = (request: AdvanceRequest): void => {
+  if (
+    request.session !== activeSession ||
+    simulation === undefined ||
+    clock === undefined ||
+    activePreset === undefined
+  ) {
+    return;
+  }
+
+  const result = clock.advance(
+    Math.min(request.elapsedSeconds, 0.25),
+    paused ? 0 : activePreset.timeScale * timeScaleMultiplier,
+    (deltaTime) => simulation?.step(deltaTime),
+  );
+  const positions = createPositionBuffer(simulation.positions, request.positionBuffer);
+
+  postWithPositions(
+    {
+      type: 'frame',
+      session: activeSession,
+      time: simulation.time,
+      positions,
+      diagnostics: simulation.getDiagnostics(),
+      droppedTime: result.droppedTime,
+    },
+    positions,
+  );
+};
+
+workerScope.onmessage = (event: MessageEvent<WorkerRequest>): void => {
+  const request = event.data;
+
+  try {
+    switch (request.type) {
+      case 'initialize':
+        initialize(request.session, request.presetId);
+        break;
+      case 'advance':
+        advance(request);
+        break;
+      case 'set-paused':
+        if (request.session === activeSession) {
+          paused = request.paused;
+        }
+        break;
+      case 'set-time-scale':
+        if (
+          request.session === activeSession &&
+          Number.isFinite(request.multiplier) &&
+          request.multiplier >= 0
+        ) {
+          timeScaleMultiplier = request.multiplier;
+        }
+        break;
+    }
+  } catch (error) {
+    const response: WorkerResponse = {
+      type: 'error',
+      session: request.session,
+      message: error instanceof Error ? error.message : 'Unknown simulation error',
+    };
+    workerScope.postMessage(response);
+  }
+};
+
