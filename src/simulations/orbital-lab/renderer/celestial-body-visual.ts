@@ -3,6 +3,7 @@ import {
   BackSide,
   CanvasTexture,
   Color,
+  ConeGeometry,
   DoubleSide,
   Group,
   LinearMipmapLinearFilter,
@@ -20,6 +21,7 @@ import {
   SRGBColorSpace,
   Texture,
   TextureLoader,
+  TorusGeometry,
   Vector3,
 } from 'three';
 
@@ -270,6 +272,17 @@ export class CelestialMaterialLibrary {
       return new MeshBasicMaterial({ color: 0x000000, toneMapped: false });
     }
 
+    if (body.kind === 'neutron-star' || body.kind === 'pulsar') {
+      return new MeshStandardMaterial({
+        color: body.color,
+        emissive: body.color,
+        emissiveIntensity: body.kind === 'pulsar' ? 2.4 : 1.45,
+        roughness: 0.38,
+        metalness: 0,
+        toneMapped: false,
+      });
+    }
+
     let texture = this.textures.get(body.surface);
     if (texture === undefined) {
       const proceduralKey = `procedural:${body.kind}:${body.surface}:${body.color}`;
@@ -318,6 +331,8 @@ export class CelestialBodyVisual {
   private atmosphere: Mesh<SphereGeometry, MeshBasicMaterial> | undefined;
   private ring: Mesh<RingGeometry, Material> | undefined;
   private blackHoleAppearance: Mesh<PlaneGeometry, ShaderMaterial> | undefined;
+  private compactField: Group | undefined;
+  private readonly decorativeMeshes: Mesh[] = [];
   private quality: QualityLevel;
 
   constructor(
@@ -379,6 +394,14 @@ export class CelestialBodyVisual {
       this.blackHoleAppearance = new Mesh(new PlaneGeometry(8, 8), appearanceMaterial);
       this.blackHoleAppearance.renderOrder = 3;
       this.root.add(this.blackHoleAppearance);
+
+      if (body.surface === 'quasar') {
+        this.addQuasarJets();
+      }
+    }
+
+    if (body.kind === 'neutron-star' || body.kind === 'pulsar') {
+      this.addCompactStarField(body.kind === 'pulsar');
     }
 
     if (body.kind === 'star') {
@@ -401,7 +424,11 @@ export class CelestialBodyVisual {
 
   update(position: Vector3, time: number): void {
     this.root.position.copy(position);
-    this.pickMesh.rotation.y = time * this.body.rotationRate;
+    const rotationPhase = (time * this.body.rotationRate) % (Math.PI * 2);
+    this.pickMesh.rotation.y = rotationPhase;
+    if (this.compactField !== undefined) {
+      this.compactField.rotation.y = rotationPhase;
+    }
 
     if (this.surfaceMaterial instanceof ShaderMaterial) {
       const timeUniform = this.surfaceMaterial.uniforms.uTime;
@@ -455,6 +482,14 @@ export class CelestialBodyVisual {
     this.ringMaterial?.dispose();
     this.blackHoleAppearance?.geometry.dispose();
     this.blackHoleAppearance?.material.dispose();
+    for (const mesh of this.decorativeMeshes) {
+      mesh.geometry.dispose();
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach((material) => material.dispose());
+      } else {
+        mesh.material.dispose();
+      }
+    }
 
     for (const child of this.root.children) {
       if (child instanceof Sprite) {
@@ -470,5 +505,74 @@ export class CelestialBodyVisual {
 
   private createRingGeometry(innerRadius: number, outerRadius: number): RingGeometry {
     return new RingGeometry(innerRadius, outerRadius, GEOMETRY_DETAIL[this.quality].ringSegments);
+  }
+
+  private addCompactStarField(includeBeams: boolean): void {
+    this.compactField = new Group();
+    this.compactField.rotation.z = 0.42;
+
+    for (const radius of [1.5, 2.05, 2.6]) {
+      const line = new Mesh(
+        new TorusGeometry(radius, 0.014, 5, GEOMETRY_DETAIL[this.quality].ringSegments),
+        new MeshBasicMaterial({
+          color: 0x7adfff,
+          transparent: true,
+          opacity: 0.18,
+          blending: AdditiveBlending,
+          depthWrite: false,
+          toneMapped: false,
+        }),
+      );
+      line.rotation.x = Math.PI / 2;
+      this.compactField.add(line);
+      this.decorativeMeshes.push(line);
+    }
+
+    if (includeBeams) {
+      for (const direction of [-1, 1]) {
+        const beam = new Mesh(
+          new ConeGeometry(0.58, 7.5, 24, 1, true),
+          new MeshBasicMaterial({
+            color: 0xbcefff,
+            transparent: true,
+            opacity: 0.17,
+            blending: AdditiveBlending,
+            depthWrite: false,
+            side: DoubleSide,
+            toneMapped: false,
+          }),
+        );
+        beam.position.y = direction * 3.75;
+        if (direction < 0) beam.rotation.z = Math.PI;
+        this.compactField.add(beam);
+        this.decorativeMeshes.push(beam);
+      }
+    }
+
+    this.oriented.add(this.compactField);
+  }
+
+  private addQuasarJets(): void {
+    const jets = new Group();
+    jets.rotation.x = Math.PI / 2;
+    for (const direction of [-1, 1]) {
+      const jet = new Mesh(
+        new ConeGeometry(0.42, 11, 28, 1, true),
+        new MeshBasicMaterial({
+          color: 0xaad8ff,
+          transparent: true,
+          opacity: 0.12,
+          blending: AdditiveBlending,
+          depthWrite: false,
+          side: DoubleSide,
+          toneMapped: false,
+        }),
+      );
+      jet.position.y = direction * 5.5;
+      if (direction < 0) jet.rotation.z = Math.PI;
+      jets.add(jet);
+      this.decorativeMeshes.push(jet);
+    }
+    this.root.add(jets);
   }
 }

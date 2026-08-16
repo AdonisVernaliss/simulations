@@ -7,6 +7,8 @@ export type BodyKind =
   | 'gas-giant'
   | 'ice-giant'
   | 'black-hole'
+  | 'neutron-star'
+  | 'pulsar'
   | 'generic';
 
 export type BodySurface =
@@ -19,6 +21,9 @@ export type BodySurface =
   | 'saturn'
   | 'uranus'
   | 'neptune'
+  | 'quasar'
+  | 'neutron-star'
+  | 'pulsar'
   | 'procedural'
   | 'none';
 

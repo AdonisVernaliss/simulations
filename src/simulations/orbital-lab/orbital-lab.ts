@@ -22,6 +22,9 @@ type OrbitalExperimentId =
   | 'black-hole-flyby'
   | 'black-hole-binary'
   | 'black-hole-merger'
+  | 'quasar-system'
+  | 'pulsar-system'
+  | 'neutron-star-binary'
   | 'planetary-disruption'
   | 'binary-stars'
   | 'figure-eight'
@@ -55,6 +58,27 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     title: 'Horizons combine and radiate energy',
     question: 'Why is the final black hole lighter than the two initial masses added together?',
     observation: 'The retained remnant carries momentum; the event card reports the estimated mass-equivalent gravitational radiation.',
+  },
+  {
+    id: 'quasar-system',
+    label: 'Active nucleus',
+    title: 'A quasar belongs inside a gravitational system',
+    question: 'Do the disk and jets add a new gravitational source?',
+    observation: 'No: nearby bodies accelerate toward the massive black hole. The luminous disk and idealized jets visualize accretion activity.',
+  },
+  {
+    id: 'pulsar-system',
+    label: 'Pulsar system',
+    title: 'A rotating neutron star acts as both beacon and mass',
+    question: 'Why do the beams sweep while the planets orbit?',
+    observation: 'Rotation moves the magnetic-axis emission pattern; orbital motion follows the pulsar mass through the same N-body solver.',
+  },
+  {
+    id: 'neutron-star-binary',
+    label: 'Neutron-star binary',
+    title: 'Compact stars orbit a shared barycentre',
+    question: 'Does either dense star remain fixed?',
+    observation: 'No. Both objects carry mass and both accelerate; relativistic inspiral is deliberately outside this Newtonian scene.',
   },
   {
     id: 'planetary-disruption',
@@ -437,7 +461,8 @@ export class OrbitalLab {
       const values = new FormData(this.bodyForm);
       const readNumber = (name: string): number => Number(values.get(name));
       const name = String(values.get('name') ?? '').trim();
-      const kind = String(values.get('kind') ?? 'rocky') as BodyMetadata['kind'];
+      const requestedKind = String(values.get('kind') ?? 'rocky');
+      const kind = (requestedKind === 'quasar' ? 'black-hole' : requestedKind) as BodyMetadata['kind'];
       const mass = readNumber('mass');
       const radius = readNumber('radius');
       const renderRadius = readNumber('render-radius');
@@ -466,7 +491,18 @@ export class OrbitalLab {
         id: `custom-${this.customBodySequence}`,
         name,
         kind,
-        surface: kind === 'star' ? 'sun' : kind === 'black-hole' ? 'none' : 'procedural',
+        surface:
+          requestedKind === 'quasar'
+            ? 'quasar'
+            : kind === 'star'
+              ? 'sun'
+              : kind === 'black-hole'
+                ? 'none'
+                : kind === 'pulsar'
+                  ? 'pulsar'
+                  : kind === 'neutron-star'
+                    ? 'neutron-star'
+                    : 'procedural',
         mass,
         radius,
         renderRadius,
@@ -634,9 +670,15 @@ export class OrbitalLab {
             )}`;
       this.selectedRotationElement.textContent = rotationPeriod;
       this.selectedPhysicsElement.textContent =
-        selection.body.kind === 'black-hole'
-          ? 'Black centre: observable shadow. Fine rim: photon ring. Broad band and upper/lower arcs: direct and lensed accretion disk. The event horizon lies inside the shadow.'
-          : 'Rendered size is enlarged for readability; gravity and collisions use the physical radius and mass.';
+        selection.body.surface === 'quasar'
+          ? 'Active object: the central mass is a black hole. The disk and bipolar jet are emission overlays; nearby bodies still interact with the black hole through the shared gravity solver.'
+          : selection.body.kind === 'black-hole'
+            ? 'Black centre: observable shadow. Fine rim: photon ring. Broad band and upper/lower arcs: direct and lensed accretion disk. The event horizon lies inside the shadow.'
+            : selection.body.kind === 'pulsar'
+              ? 'A rotating neutron star. The cones mark an idealized magnetic-axis lighthouse beam; the object itself has mass and participates in every N-body interaction.'
+              : selection.body.kind === 'neutron-star'
+                ? 'A compact stellar remnant shown at an enlarged visual radius. Its mass and physical radius—not the glow—set dynamics and contact.'
+                : 'Rendered size is enlarged for readability; gravity and collisions use the physical radius and mass.';
     }
 
     this.bodyListElement
@@ -882,6 +924,9 @@ export class OrbitalLab {
                 <option value="ice-giant">Ice giant</option>
                 <option value="star">Star</option>
                 <option value="black-hole">Black hole</option>
+                <option value="quasar">Active black hole · quasar</option>
+                <option value="neutron-star">Neutron star</option>
+                <option value="pulsar">Pulsar</option>
               </select>
             </label>
             <label class="form-field">
