@@ -2,6 +2,7 @@ import type {
   BodyDefinition,
   BodyKind,
   BodySurface,
+  CollisionEvent,
   SimulationDiagnostics,
 } from './model/types';
 
@@ -66,6 +67,7 @@ export interface InitializedResponse {
   readonly time: number;
   readonly positions: ArrayBuffer;
   readonly diagnostics: SimulationDiagnostics;
+  readonly collision?: CollisionEvent;
 }
 
 export interface FrameResponse {
@@ -75,6 +77,7 @@ export interface FrameResponse {
   readonly positions: ArrayBuffer;
   readonly diagnostics: SimulationDiagnostics;
   readonly droppedTime: number;
+  readonly collision?: CollisionEvent;
 }
 
 export interface ErrorResponse {

@@ -3,6 +3,7 @@ import {
   type GuidedExperiment,
 } from '../../core/guided-experiments';
 import { getPreset, presets } from './model/presets';
+import type { CollisionEvent } from './model/types';
 import {
   OrbitalRenderer,
   type BodySelection,
@@ -107,11 +108,16 @@ export class OrbitalLab {
   private readonly energyDriftElement: HTMLElement;
   private readonly momentumElement: HTMLElement;
   private readonly qualityActiveElement: HTMLElement;
+  private readonly collisionNotice: HTMLElement;
+  private readonly collisionTitle: HTMLElement;
+  private readonly collisionDetail: HTMLElement;
   private readonly bodyListElement: HTMLElement;
   private readonly inspectorElement: HTMLElement;
   private readonly selectedNameElement: HTMLElement;
+  private readonly selectedTypeElement: HTMLElement;
   private readonly selectedMassElement: HTMLElement;
   private readonly selectedRadiusElement: HTMLElement;
+  private readonly selectedRenderRadiusElement: HTMLElement;
   private readonly selectedPositionElement: HTMLElement;
   private readonly focusBodyButton: HTMLButtonElement;
   private readonly closeInspectorButton: HTMLButtonElement;
@@ -134,6 +140,8 @@ export class OrbitalLab {
   private vectorsVisible = false;
   private bodies: readonly BodyMetadata[] = [];
   private selectedBodyIndex: number | undefined;
+  private lastCollisionSequence = 0;
+  private collisionNoticeTimeout = 0;
 
   constructor(root: HTMLElement) {
     root.innerHTML = this.createMarkup();
@@ -158,11 +166,16 @@ export class OrbitalLab {
     this.energyDriftElement = requireElement(root, '[data-energy-drift]');
     this.momentumElement = requireElement(root, '[data-momentum]');
     this.qualityActiveElement = requireElement(root, '[data-quality-active]');
+    this.collisionNotice = requireElement(root, '[data-collision-notice]');
+    this.collisionTitle = requireElement(root, '[data-collision-title]');
+    this.collisionDetail = requireElement(root, '[data-collision-detail]');
     this.bodyListElement = requireElement(root, '[data-body-list]');
     this.inspectorElement = requireElement(root, '[data-inspector]');
     this.selectedNameElement = requireElement(root, '[data-selected-name]');
+    this.selectedTypeElement = requireElement(root, '[data-selected-type]');
     this.selectedMassElement = requireElement(root, '[data-selected-mass]');
     this.selectedRadiusElement = requireElement(root, '[data-selected-radius]');
+    this.selectedRenderRadiusElement = requireElement(root, '[data-selected-render-radius]');
     this.selectedPositionElement = requireElement(root, '[data-selected-position]');
     this.focusBodyButton = requireElement(root, '[data-focus-body]');
     this.closeInspectorButton = requireElement(root, '[data-close-inspector]');
@@ -201,6 +214,7 @@ export class OrbitalLab {
 
   destroy(): void {
     cancelAnimationFrame(this.animationFrame);
+    window.clearTimeout(this.collisionNoticeTimeout);
     this.worker.destroy();
     this.renderer.destroy();
   }
@@ -229,6 +243,8 @@ export class OrbitalLab {
     this.bodies = details.bodies;
     this.selectedBodyIndex = undefined;
     this.initialEnergy = frame.diagnostics.totalEnergy;
+    this.lastCollisionSequence = 0;
+    this.collisionNotice.dataset.open = 'false';
     this.renderer.setBodies(
       details.bodies,
       frame.positions,
@@ -242,6 +258,7 @@ export class OrbitalLab {
     this.presetSelect.value = details.presetId;
     this.renderBodyList();
     this.updateMetrics(frame, true);
+    this.updateCollisionNotice(frame.collision);
     this.setStatus(this.paused ? 'Paused' : 'Running', this.paused ? 'paused' : 'running');
   }
 
@@ -249,6 +266,7 @@ export class OrbitalLab {
     this.renderer.update(frame.positions, frame.time);
     this.updateSelectedPosition(frame.positions);
     this.updateMetrics(frame);
+    this.updateCollisionNotice(frame.collision);
 
     if (frame.droppedTime > 0.01 && this.qualityMode === 'auto') {
       this.reduceQuality();
@@ -271,6 +289,44 @@ export class OrbitalLab {
     this.energyDriftElement.textContent = `${energyDrift.toExponential(1)}%`;
     this.momentumElement.textContent = momentum.toExponential(2);
     this.lastMetricsUpdate = now;
+  }
+
+  private updateCollisionNotice(collision: CollisionEvent | undefined): void {
+    if (collision === undefined || collision.sequence <= this.lastCollisionSequence) {
+      return;
+    }
+
+    this.lastCollisionSequence = collision.sequence;
+    const descriptions: Record<CollisionEvent['outcome'], readonly [string, string]> = {
+      merge: [
+        'Accretion',
+        'Impact speed stayed below the disruption regime; mass and momentum formed one remnant.',
+      ],
+      'hit-and-run': [
+        'Hit and run',
+        'A fast grazing impact transferred momentum, but both major bodies survived.',
+      ],
+      disruption: [
+        'Catastrophic disruption',
+        `${collision.fragmentCount} resolved remnants now continue under the shared gravitational field.`,
+      ],
+      capture: [
+        'Horizon capture',
+        'The body crossed the scaled capture radius and its mass and momentum joined the black hole.',
+      ],
+      'black-hole-merger': [
+        'Black hole merger',
+        `${collision.radiatedMass.toExponential(2)} mass units were assigned to radiated gravitational energy.`,
+      ],
+    };
+    const [title, detail] = descriptions[collision.outcome];
+    this.collisionTitle.textContent = title;
+    this.collisionDetail.textContent = detail;
+    this.collisionNotice.dataset.open = 'true';
+    window.clearTimeout(this.collisionNoticeTimeout);
+    this.collisionNoticeTimeout = window.setTimeout(() => {
+      this.collisionNotice.dataset.open = 'false';
+    }, 6_500);
   }
 
   private bindControls(): void {
@@ -328,14 +384,24 @@ export class OrbitalLab {
       const values = new FormData(this.bodyForm);
       const readNumber = (name: string): number => Number(values.get(name));
       const name = String(values.get('name') ?? '').trim();
+      const kind = String(values.get('kind') ?? 'rocky') as BodyMetadata['kind'];
       const mass = readNumber('mass');
       const radius = readNumber('radius');
+      const renderRadius = readNumber('render-radius');
       const positionX = readNumber('position-x');
       const positionY = readNumber('position-y');
       const velocityX = readNumber('velocity-x');
       const velocityY = readNumber('velocity-y');
       const color = String(values.get('color') ?? '#79d9ff');
-      const numericValues = [mass, radius, positionX, positionY, velocityX, velocityY];
+      const numericValues = [
+        mass,
+        radius,
+        renderRadius,
+        positionX,
+        positionY,
+        velocityX,
+        velocityY,
+      ];
 
       if (!name || numericValues.some((value) => !Number.isFinite(value))) {
         this.bodyFormError.textContent = 'Enter a name and finite numeric values.';
@@ -346,8 +412,11 @@ export class OrbitalLab {
       this.worker.addBody({
         id: `custom-${this.customBodySequence}`,
         name,
+        kind,
+        surface: kind === 'star' ? 'sun' : kind === 'black-hole' ? 'none' : 'procedural',
         mass,
         radius,
+        renderRadius,
         color,
         position: [positionX, positionY, 0],
         velocity: [velocityX, velocityY, 0],
@@ -482,8 +551,13 @@ export class OrbitalLab {
 
     if (selection !== undefined) {
       this.selectedNameElement.textContent = selection.body.name;
+      this.selectedTypeElement.textContent = selection.body.kind.replaceAll('-', ' ');
       this.selectedMassElement.textContent = selection.body.mass.toExponential(4);
       this.selectedRadiusElement.textContent = formatNumber(selection.body.radius, 4);
+      this.selectedRenderRadiusElement.textContent = formatNumber(
+        selection.body.renderRadius,
+        4,
+      );
       this.selectedPositionElement.textContent = 'Updating…';
     }
 
@@ -614,6 +688,15 @@ export class OrbitalLab {
             <p class="quality-note">Render <span data-quality-active>balanced</span></p>
           </aside>
 
+          <aside class="collision-notice" data-collision-notice data-open="false" aria-live="polite">
+            <span class="collision-icon" aria-hidden="true">✦</span>
+            <div>
+              <p class="eyebrow">Physical event</p>
+              <strong data-collision-title>Collision</strong>
+              <p data-collision-detail></p>
+            </div>
+          </aside>
+
           <aside class="object-inspector" data-inspector data-open="false" aria-hidden="true">
             <header>
               <div>
@@ -624,12 +707,20 @@ export class OrbitalLab {
             </header>
             <dl>
               <div>
+                <dt>Object type</dt>
+                <dd data-selected-type>—</dd>
+              </div>
+              <div>
                 <dt>Relative mass</dt>
                 <dd data-selected-mass>—</dd>
               </div>
               <div>
-                <dt>Display radius</dt>
+                <dt>Physical radius</dt>
                 <dd data-selected-radius>—</dd>
+              </div>
+              <div>
+                <dt>Visual radius</dt>
+                <dd data-selected-render-radius>—</dd>
               </div>
               <div>
                 <dt>Position x, y, z</dt>
@@ -692,13 +783,28 @@ export class OrbitalLab {
               <span>Name</span>
               <input name="name" maxlength="32" required />
             </label>
-            <label class="form-field">
-              <span>Mass</span>
-              <input name="mass" type="number" value="0.001" min="0.000000001" max="10" step="any" required />
+            <label class="form-field form-field-wide">
+              <span>Object type</span>
+              <select name="kind" required>
+                <option value="rocky" selected>Rocky body</option>
+                <option value="terrestrial">Terrestrial planet</option>
+                <option value="gas-giant">Gas giant</option>
+                <option value="ice-giant">Ice giant</option>
+                <option value="star">Star</option>
+                <option value="black-hole">Black hole</option>
+              </select>
             </label>
             <label class="form-field">
+              <span>Mass</span>
+              <input name="mass" type="number" value="0.001" min="0.000000001" max="100" step="any" required />
+            </label>
+            <label class="form-field">
+              <span>Physical radius</span>
+              <input name="radius" type="number" value="0.02" min="0.000001" max="1" step="any" required />
+            </label>
+            <label class="form-field form-field-wide">
               <span>Visual radius</span>
-              <input name="radius" type="number" value="0.07" min="0.005" max="0.5" step="any" required />
+              <input name="render-radius" type="number" value="0.07" min="0.005" max="1" step="any" required />
             </label>
             <label class="form-field">
               <span>Position X</span>

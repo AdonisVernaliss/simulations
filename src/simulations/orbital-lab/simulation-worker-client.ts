@@ -4,7 +4,7 @@ import type {
   WorkerRequest,
   WorkerResponse,
 } from './worker-protocol';
-import type { SimulationDiagnostics } from './model/types';
+import type { CollisionEvent, SimulationDiagnostics } from './model/types';
 import type { BodyDefinition } from './model/types';
 
 export interface SimulationFrame {
@@ -12,6 +12,7 @@ export interface SimulationFrame {
   readonly positions: Float32Array;
   readonly diagnostics: SimulationDiagnostics;
   readonly droppedTime: number;
+  readonly collision?: CollisionEvent;
 }
 
 export interface SimulationDetails {
@@ -115,6 +116,7 @@ export class SimulationWorkerClient {
       positions: new Float32Array(response.positions),
       diagnostics: response.diagnostics,
       droppedTime: response.type === 'frame' ? response.droppedTime : 0,
+      collision: response.collision,
     };
 
     if (response.type === 'initialized') {

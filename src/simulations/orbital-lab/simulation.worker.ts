@@ -73,6 +73,7 @@ const postInitialized = (recycledBuffer?: ArrayBuffer): void => {
       time: simulation.time,
       positions,
       diagnostics: simulation.getDiagnostics(),
+      collision: simulation.lastCollisionEvent,
     },
     positions,
   );
@@ -124,6 +125,7 @@ const advance = (request: AdvanceRequest): void => {
       positions,
       diagnostics: simulation.getDiagnostics(),
       droppedTime: result.droppedTime,
+      collision: simulation.lastCollisionEvent,
     },
     positions,
   );
