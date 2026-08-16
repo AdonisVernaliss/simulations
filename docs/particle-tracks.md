@@ -62,5 +62,5 @@ Only single-particle propagation is implemented. Conservation laws for multi-par
 - Particle Data Group, [Review of Particle Physics 2026](https://pdg.lbl.gov/2026/), evaluated particle properties and current review index as of 16 August 2026.
 - Particle Data Group, [Particle Detectors at Accelerators](https://pdg.lbl.gov/2026/reviews/rpp2026-rev-particle-detectors-accel.pdf), Section 35.13 for charged-particle curvature in a uniform magnetic field.
 - Particle Data Group, [Physical Constants](https://pdg.lbl.gov/2026/reviews/rpp2026-rev-phys-constants.pdf), including the speed of light and evaluated electron and proton masses.
-- Particle Data Group, [Muon listing](https://pdg.lbl.gov/2025/listings/rpp2025-list-muon.pdf), evaluated muon mass and mean life used by this release.
-- Particle Data Group, [Meson summary table](https://pdg.lbl.gov/2025/tables/rpp2025-sum-mesons.pdf), evaluated charged-pion mass and mean life used by this release.
+- Particle Data Group, [Muon listing](https://pdg.lbl.gov/2026/listings/rpp2026-list-muon.pdf), evaluated muon mass and mean life used by this release.
+- Particle Data Group, [Meson summary table](https://pdg.lbl.gov/2026/tables/rpp2026-sum-mesons.pdf), evaluated charged-pion mass and mean life used by this release.
