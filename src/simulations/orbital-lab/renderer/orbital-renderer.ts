@@ -24,9 +24,6 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 
 import type { BodyMetadata } from '../worker-protocol';
 import { calculateTidalStressRatio } from '../model/tidal-stress';
@@ -34,7 +31,6 @@ import {
   CelestialBodyVisual,
   CelestialMaterialLibrary,
 } from './celestial-body-visual';
-import { GravitationalLensing } from './gravitational-lensing';
 import { GravityFieldVisual } from './gravity-field-visual';
 import { SkyEnvironment } from './sky-environment';
 
@@ -130,10 +126,6 @@ class BodyTrail {
 
 export class OrbitalRenderer {
   private readonly renderer: WebGLRenderer;
-  private readonly composer: EffectComposer;
-  private readonly scenePass: RenderPass;
-  private readonly outputPass: OutputPass;
-  private readonly lensing = new GravitationalLensing();
   private readonly gravityField = new GravityFieldVisual();
   private readonly scene = new Scene();
   private readonly compactObjectOverlay = new Scene();
@@ -188,13 +180,6 @@ export class OrbitalRenderer {
     const maximumAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
     this.materialLibrary = new CelestialMaterialLibrary(maximumAnisotropy);
     this.skyEnvironment = new SkyEnvironment(maximumAnisotropy);
-    this.composer = new EffectComposer(this.renderer);
-    this.scenePass = new RenderPass(this.scene, this.camera);
-    this.outputPass = new OutputPass();
-    this.composer.addPass(this.scenePass);
-    this.composer.addPass(this.lensing.pass);
-    this.composer.addPass(this.outputPass);
-
     this.camera.position.set(0, -7, 6);
     this.controls = new OrbitControls(this.camera, canvas);
     this.controls.enableDamping = true;
@@ -243,6 +228,7 @@ export class OrbitalRenderer {
         this.quality,
         this.materialLibrary,
         this.glowTexture,
+        this.skyEnvironment.texture,
       );
       this.scene.add(visual.root);
       this.compactObjectOverlay.add(visual.overlay);
@@ -297,8 +283,6 @@ export class OrbitalRenderer {
     this.updateSelectionRing(positions);
     this.updateTidalDeformation(positions);
     this.gravityField.update(positions);
-    this.lensing.update(this.bodies, positions, this.camera, this.quality);
-
     this.previousPositions.set(positions);
     this.previousTime = time;
   }
@@ -322,7 +306,7 @@ export class OrbitalRenderer {
       visual.animate(elapsedSeconds);
       visual.faceCamera(this.camera.position);
     });
-    this.composer.render();
+    this.renderer.render(this.scene, this.camera);
     this.renderer.autoClear = false;
     this.renderer.clearDepth();
     this.renderer.render(this.compactObjectOverlay, this.camera);
@@ -337,9 +321,11 @@ export class OrbitalRenderer {
     this.renderer.toneMappingExposure = profile.exposure;
     this.skyEnvironment.setQuality(quality);
     this.materialLibrary.setQuality(quality);
-    this.bodyVisuals.forEach((visual) => visual.setQuality(quality));
+    this.bodyVisuals.forEach((visual) => {
+      visual.setQuality(quality);
+      visual.setSkyTexture(this.skyEnvironment.texture);
+    });
     this.gravityField.setQuality(quality);
-    this.composer.setPixelRatio(Math.min(devicePixelRatio, profile.maximumPixelRatio));
     this.resize();
   }
 
@@ -414,11 +400,7 @@ export class OrbitalRenderer {
     this.selectionRing.material.dispose();
     this.glowTexture.dispose();
     this.materialLibrary.dispose();
-    this.lensing.dispose();
     this.gravityField.dispose();
-    this.scenePass.dispose();
-    this.outputPass.dispose();
-    this.composer.dispose();
     this.renderer.dispose();
   }
 
@@ -428,7 +410,6 @@ export class OrbitalRenderer {
     const height = Math.max(parent?.clientHeight ?? this.canvas.clientHeight, 1);
 
     this.renderer.setSize(width, height, false);
-    this.composer.setSize(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   }

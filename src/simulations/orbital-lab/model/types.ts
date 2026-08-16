@@ -21,6 +21,7 @@ export type BodySurface =
   | 'saturn'
   | 'uranus'
   | 'neptune'
+  | 'accretion-disk'
   | 'quasar'
   | 'neutron-star'
   | 'pulsar'

@@ -8,6 +8,8 @@ import {
   Group,
   LinearMipmapLinearFilter,
   Material,
+  Matrix3,
+  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
@@ -27,6 +29,11 @@ import {
 
 import type { BodyMetadata } from '../worker-protocol';
 import type { QualityLevel } from './orbital-renderer';
+import {
+  BLACK_HOLE_BEAM_FRAGMENT_SHADER,
+  BLACK_HOLE_BEAM_VERTEX_SHADER,
+} from './black-hole-beam-shader';
+import { SchwarzschildBeamResources } from './schwarzschild-beam-resources';
 
 interface GeometryDetail {
   readonly widthSegments: number;
@@ -162,91 +169,6 @@ const MOLTEN_FRAGMENT_SHADER = `
   }
 `;
 
-const BLACK_HOLE_VERTEX_SHADER = `
-  varying vec2 vUvPosition;
-
-  void main() {
-    vUvPosition = uv * 2.0 - 1.0;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
-const BLACK_HOLE_FRAGMENT_SHADER = `
-  uniform float uInclination;
-  varying vec2 vUvPosition;
-
-  void main() {
-    vec2 p = vUvPosition;
-    float radius = length(p);
-    float angle = atan(p.y, p.x);
-    float shadow = 1.0 - smoothstep(0.515, 0.535, radius);
-    float photonRing = exp(-abs(radius - 0.575) * 150.0);
-    float arcRadius = 0.69 + 0.035 * cos(angle * 2.0);
-    float lensedArc = exp(-abs(radius - arcRadius) * 75.0);
-    lensedArc *= smoothstep(0.10, 0.32, abs(p.y));
-    lensedArc *= mix(0.18, 0.9, uInclination);
-    vec3 ringColor = mix(vec3(1.0, 0.42, 0.10), vec3(0.92, 0.97, 1.0), smoothstep(-0.75, 0.75, p.x));
-    vec3 color = ringColor * (photonRing * 1.45 + lensedArc * 0.52);
-    color *= 1.0 - shadow;
-    float alpha = max(shadow, clamp(photonRing + lensedArc, 0.0, 1.0));
-    if (alpha < 0.008) discard;
-    gl_FragColor = vec4(color, alpha);
-  }
-`;
-
-const ACCRETION_DISK_VERTEX_SHADER = `
-  varying vec2 vDiskPosition;
-  varying vec3 vWorldPosition;
-  varying vec3 vWorldTangent;
-
-  void main() {
-    vDiskPosition = position.xy;
-    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
-    vWorldPosition = worldPosition.xyz;
-    vec3 localTangent = normalize(vec3(-position.y, position.x, 0.0));
-    vWorldTangent = normalize(mat3(modelMatrix) * localTangent);
-    gl_Position = projectionMatrix * viewMatrix * worldPosition;
-  }
-`;
-
-const ACCRETION_DISK_FRAGMENT_SHADER = `
-  uniform float uVisualTime;
-  uniform float uActivity;
-  varying vec2 vDiskPosition;
-  varying vec3 vWorldPosition;
-  varying vec3 vWorldTangent;
-
-  float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-  }
-
-  void main() {
-    float radius = length(vDiskPosition);
-    float angle = atan(vDiskPosition.y, vDiskPosition.x);
-    float normalizedRadius = clamp((radius - 1.42) / (4.2 - 1.42), 0.0, 1.0);
-    float innerFade = smoothstep(1.42, 1.58, radius);
-    float outerFade = 1.0 - smoothstep(3.55, 4.2, radius);
-    float warpedRadius = radius + sin(angle * 5.0 - uVisualTime * 0.42) * 0.055;
-    warpedRadius += sin(angle * 13.0 + uVisualTime * 0.31) * 0.022;
-    float broadBands = sin(warpedRadius * 31.0 - uVisualTime * 1.35);
-    float fineBands = sin(warpedRadius * 83.0 + angle * 2.0 - uVisualTime * 2.1);
-    float granular = hash(floor(vec2(angle * 24.0, radius * 46.0))) - 0.5;
-    float filaments = 0.76 + 0.09 * broadBands + 0.045 * fineBands + 0.02 * granular;
-    vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
-    float lineOfSightVelocity = dot(vWorldTangent, viewDirection);
-    float doppler = mix(0.48, 1.62, smoothstep(-0.92, 0.92, lineOfSightVelocity));
-    vec3 outerColor = vec3(0.72, 0.14, 0.018);
-    vec3 middleColor = vec3(1.0, 0.48, 0.075);
-    vec3 innerColor = vec3(1.0, 0.96, 0.82);
-    vec3 color = mix(middleColor, outerColor, smoothstep(0.35, 1.0, normalizedRadius));
-    color = mix(innerColor, color, smoothstep(0.0, 0.42, normalizedRadius));
-    float alpha = innerFade * outerFade * filaments * mix(0.42, 0.82, uActivity);
-    alpha *= 0.68 + 0.32 * (1.0 - normalizedRadius);
-    if (alpha < 0.012) discard;
-    gl_FragColor = vec4(color * doppler * mix(0.86, 1.25, uActivity), alpha);
-  }
-`;
-
 const hash2 = (x: number, y: number, seed: number): number => {
   const value = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43_758.5453;
   return value - Math.floor(value);
@@ -328,6 +250,7 @@ const createProceduralTexture = (body: BodyMetadata): CanvasTexture => {
 export class CelestialMaterialLibrary {
   private readonly textures = new Map<string, Texture>();
   private readonly loader = new TextureLoader();
+  readonly beamResources = new SchwarzschildBeamResources();
 
   constructor(private readonly maximumAnisotropy: number) {
     for (const [surface, path] of Object.entries(OBSERVATIONAL_TEXTURES)) {
@@ -418,6 +341,7 @@ export class CelestialMaterialLibrary {
       texture.dispose();
     }
     this.textures.clear();
+    this.beamResources.dispose();
   }
 }
 
@@ -436,11 +360,14 @@ export class CelestialBodyVisual {
   private ring: Mesh<RingGeometry, Material> | undefined;
   private blackHoleAppearance: Mesh<PlaneGeometry, ShaderMaterial> | undefined;
   private blackHoleDiskFrame: Group | undefined;
-  private blackHoleDisk: Mesh<RingGeometry, ShaderMaterial> | undefined;
+  private blackHoleMaterial: ShaderMaterial | undefined;
+  private blackHoleResources: SchwarzschildBeamResources | undefined;
   private compactField: Group | undefined;
   private readonly decorativeMeshes: Mesh[] = [];
-  private readonly diskNormal = new Vector3();
-  private readonly viewDirection = new Vector3();
+  private readonly cameraLocal = new Vector3();
+  private readonly diskToWorld = new Matrix3();
+  private readonly worldToDisk = new Matrix3();
+  private readonly diskRotation = new Matrix4();
   private visualTime = 0;
   private quality: QualityLevel;
 
@@ -450,6 +377,7 @@ export class CelestialBodyVisual {
     quality: QualityLevel,
     materials: CelestialMaterialLibrary,
     glowTexture: Texture,
+    skyTexture: Texture,
   ) {
     this.quality = quality;
     this.surfaceMaterial = materials.createSurfaceMaterial(body);
@@ -494,36 +422,36 @@ export class CelestialBodyVisual {
 
     if (body.kind === 'black-hole') {
       const appearanceMaterial = new ShaderMaterial({
-        uniforms: { uInclination: { value: 0.75 } },
-        vertexShader: BLACK_HOLE_VERTEX_SHADER,
-        fragmentShader: BLACK_HOLE_FRAGMENT_SHADER,
+        uniforms: {
+          uRayDeflection: { value: null },
+          uRayInverseRadius: { value: null },
+          uSkyMap: { value: skyTexture },
+          uWorldToDisk: { value: this.worldToDisk },
+          uDiskToWorld: { value: this.diskToWorld },
+          uCameraLocal: { value: this.cameraLocal },
+          uBeamTracingReady: { value: 0 },
+          uVisualTime: { value: 0 },
+          uMode: {
+            value: body.surface === 'quasar' ? 2 : body.surface === 'accretion-disk' ? 1 : 0,
+          },
+          uDetail: { value: quality === 'high' ? 2 : quality === 'balanced' ? 1 : 0 },
+        },
+        vertexShader: BLACK_HOLE_BEAM_VERTEX_SHADER,
+        fragmentShader: BLACK_HOLE_BEAM_FRAGMENT_SHADER,
         transparent: true,
         side: DoubleSide,
         depthWrite: false,
         toneMapped: false,
       });
-      this.blackHoleAppearance = new Mesh(new PlaneGeometry(3.4, 3.4), appearanceMaterial);
+      this.blackHoleMaterial = appearanceMaterial;
+      this.blackHoleResources = materials.beamResources;
+      this.blackHoleResources.bind(appearanceMaterial);
+      this.blackHoleAppearance = new Mesh(new PlaneGeometry(28, 28), appearanceMaterial);
       this.blackHoleAppearance.renderOrder = 5;
       this.overlay.add(this.blackHoleAppearance);
 
       this.blackHoleDiskFrame = new Group();
-      this.blackHoleDiskFrame.rotation.set(body.axialTilt, body.axialTilt * 0.24, 0.18);
-      const diskMaterial = new ShaderMaterial({
-        uniforms: {
-          uVisualTime: { value: 0 },
-          uActivity: { value: body.surface === 'quasar' ? 1 : 0.58 },
-        },
-        vertexShader: ACCRETION_DISK_VERTEX_SHADER,
-        fragmentShader: ACCRETION_DISK_FRAGMENT_SHADER,
-        transparent: true,
-        side: DoubleSide,
-        depthWrite: false,
-        blending: AdditiveBlending,
-        toneMapped: false,
-      });
-      this.blackHoleDisk = new Mesh(this.createRingGeometry(1.42, 4.2), diskMaterial);
-      this.blackHoleDisk.renderOrder = 3;
-      this.blackHoleDiskFrame.add(this.blackHoleDisk);
+      this.blackHoleDiskFrame.rotation.x = body.axialTilt;
       this.overlay.add(this.blackHoleDiskFrame);
 
       if (body.surface === 'quasar') {
@@ -573,26 +501,31 @@ export class CelestialBodyVisual {
   }
 
   faceCamera(cameraPosition: Vector3): void {
-    if (this.blackHoleAppearance === undefined || this.blackHoleDiskFrame === undefined) {
+    if (
+      this.blackHoleAppearance === undefined ||
+      this.blackHoleDiskFrame === undefined ||
+      this.blackHoleMaterial === undefined
+    ) {
       return;
     }
 
     this.blackHoleAppearance.lookAt(cameraPosition);
-    this.diskNormal.set(0, 0, 1).applyQuaternion(this.blackHoleDiskFrame.quaternion).normalize();
-    this.viewDirection.subVectors(cameraPosition, this.overlay.position).normalize();
-    const faceOn = Math.abs(this.diskNormal.dot(this.viewDirection));
-    this.blackHoleAppearance.material.uniforms.uInclination!.value = Math.sqrt(
-      Math.max(0, 1 - faceOn * faceOn),
-    );
+    this.diskRotation.makeRotationFromQuaternion(this.blackHoleDiskFrame.quaternion);
+    this.diskToWorld.setFromMatrix4(this.diskRotation);
+    this.worldToDisk.copy(this.diskToWorld).transpose();
+    this.cameraLocal
+      .subVectors(cameraPosition, this.overlay.position)
+      .applyMatrix3(this.worldToDisk)
+      .divideScalar(this.body.renderRadius);
   }
 
   animate(elapsedSeconds: number): void {
-    if (this.blackHoleDisk === undefined) {
+    if (this.blackHoleMaterial === undefined) {
       return;
     }
 
     this.visualTime += elapsedSeconds;
-    this.blackHoleDisk.material.uniforms.uVisualTime!.value = this.visualTime;
+    this.blackHoleMaterial.uniforms.uVisualTime!.value = this.visualTime;
   }
 
   setTidalDeformation(
@@ -641,9 +574,15 @@ export class CelestialBodyVisual {
       this.ring.geometry = this.createRingGeometry(1.35, 2.28);
     }
 
-    if (this.blackHoleDisk !== undefined) {
-      this.blackHoleDisk.geometry.dispose();
-      this.blackHoleDisk.geometry = this.createRingGeometry(1.42, 4.2);
+    if (this.blackHoleMaterial !== undefined) {
+      this.blackHoleMaterial.uniforms.uDetail!.value =
+        quality === 'high' ? 2 : quality === 'balanced' ? 1 : 0;
+    }
+  }
+
+  setSkyTexture(texture: Texture): void {
+    if (this.blackHoleMaterial !== undefined) {
+      this.blackHoleMaterial.uniforms.uSkyMap!.value = texture;
     }
   }
 
@@ -654,10 +593,11 @@ export class CelestialBodyVisual {
     this.atmosphereMaterial?.dispose();
     this.ring?.geometry.dispose();
     this.ringMaterial?.dispose();
+    if (this.blackHoleMaterial !== undefined) {
+      this.blackHoleResources?.unbind(this.blackHoleMaterial);
+    }
     this.blackHoleAppearance?.geometry.dispose();
     this.blackHoleAppearance?.material.dispose();
-    this.blackHoleDisk?.geometry.dispose();
-    this.blackHoleDisk?.material.dispose();
     for (const mesh of this.decorativeMeshes) {
       mesh.geometry.dispose();
       if (Array.isArray(mesh.material)) {

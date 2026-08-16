@@ -45,8 +45,14 @@ interface LookupDefinition {
   readonly texture: DataTexture;
 }
 
-const createPlaceholderTexture = (): DataTexture => {
-  const texture = new DataTexture(new Float32Array(2), 1, 1, RGFormat, FloatType);
+const createPlaceholderTexture = (width: number, height: number): DataTexture => {
+  const texture = new DataTexture(
+    new Float32Array(width * height * 2),
+    width,
+    height,
+    RGFormat,
+    FloatType,
+  );
   texture.minFilter = NearestFilter;
   texture.magFilter = NearestFilter;
   texture.wrapS = ClampToEdgeWrapping;
@@ -57,16 +63,18 @@ const createPlaceholderTexture = (): DataTexture => {
 };
 
 export class SchwarzschildBeamResources {
-  readonly deflectionTexture = createPlaceholderTexture();
-  readonly inverseRadiusTexture = createPlaceholderTexture();
+  readonly deflectionTexture = createPlaceholderTexture(512, 512);
+  readonly inverseRadiusTexture = createPlaceholderTexture(64, 32);
 
   private readonly materials = new Set<ShaderMaterial>();
   private loading: Promise<void> | undefined;
+  private ready = false;
   private disposed = false;
 
   bind(material: ShaderMaterial): void {
     material.uniforms.uRayDeflection!.value = this.deflectionTexture;
     material.uniforms.uRayInverseRadius!.value = this.inverseRadiusTexture;
+    material.uniforms.uBeamTracingReady!.value = this.ready ? 1 : 0;
     this.materials.add(material);
     this.loading ??= this.load();
   }
@@ -101,6 +109,7 @@ export class SchwarzschildBeamResources {
     try {
       await Promise.all(definitions.map((definition) => this.loadLookup(definition)));
       if (!this.disposed) {
+        this.ready = true;
         for (const material of this.materials) {
           material.uniforms.uBeamTracingReady!.value = 1;
         }
@@ -123,11 +132,7 @@ export class SchwarzschildBeamResources {
     if (this.disposed) {
       return;
     }
-    definition.texture.image = {
-      data: lookup.values,
-      width: lookup.width,
-      height: lookup.height,
-    };
+    (definition.texture.image.data as Float32Array).set(lookup.values);
     definition.texture.needsUpdate = true;
   }
 }
