@@ -6,6 +6,7 @@ import {
   Color,
   DynamicDrawUsage,
   GridHelper,
+  InstancedBufferAttribute,
   InstancedMesh,
   Line,
   LineBasicMaterial,
@@ -15,6 +16,7 @@ import {
   Points,
   PointsMaterial,
   Scene,
+  SRGBColorSpace,
   SphereGeometry,
   Vector3,
   WebGLRenderer,
@@ -134,7 +136,7 @@ export class OrbitalRenderer {
       powerPreference: 'high-performance',
     });
     this.renderer.setClearColor(0x000000, 0);
-    this.renderer.outputColorSpace = 'srgb';
+    this.renderer.outputColorSpace = SRGBColorSpace;
 
     this.camera.position.set(0, -7, 6);
     this.controls = new OrbitControls(this.camera, canvas);
@@ -165,14 +167,20 @@ export class OrbitalRenderer {
     this.bodies = bodies;
 
     const geometry = new SphereGeometry(1, 20, 12);
-    const bodyMaterial = new MeshBasicMaterial({ vertexColors: true });
+    const bodyMaterial = new MeshBasicMaterial({
+      color: 0xffffff,
+      vertexColors: false,
+      toneMapped: false,
+    });
     const glowMaterial = new MeshBasicMaterial({
-      vertexColors: true,
+      color: 0xffffff,
+      vertexColors: false,
       transparent: true,
       opacity: 0.1,
       side: BackSide,
       depthWrite: false,
       blending: AdditiveBlending,
+      toneMapped: false,
     });
 
     this.bodyMesh = new InstancedMesh(geometry, bodyMaterial, bodies.length);
@@ -189,11 +197,13 @@ export class OrbitalRenderer {
       return trail;
     });
 
+    const instanceColors = new Float32Array(bodies.length * 3);
     bodies.forEach((body, index) => {
       this.color.set(body.color);
-      this.bodyMesh?.setColorAt(index, this.color);
-      this.glowMesh?.setColorAt(index, this.color);
+      this.color.toArray(instanceColors, index * 3);
     });
+    this.bodyMesh.instanceColor = new InstancedBufferAttribute(instanceColors, 3);
+    this.glowMesh.instanceColor = new InstancedBufferAttribute(instanceColors.slice(), 3);
 
     this.scene.add(this.glowMesh);
     this.scene.add(this.bodyMesh);
