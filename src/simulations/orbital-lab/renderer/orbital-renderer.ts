@@ -2,23 +2,17 @@ import {
   ACESFilmicToneMapping,
   AdditiveBlending,
   AmbientLight,
-  BackSide,
   BufferAttribute,
   BufferGeometry,
   CanvasTexture,
   Color,
   DoubleSide,
   DynamicDrawUsage,
-  GridHelper,
-  InstancedBufferAttribute,
-  InstancedMesh,
   Line,
   LineBasicMaterial,
   LineSegments,
-  Matrix4,
   Mesh,
   MeshBasicMaterial,
-  MeshStandardMaterial,
   PerspectiveCamera,
   PointLight,
   Points,
@@ -26,10 +20,7 @@ import {
   Raycaster,
   RingGeometry,
   Scene,
-  Sprite,
-  SpriteMaterial,
   SRGBColorSpace,
-  SphereGeometry,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -37,6 +28,10 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 import type { BodyMetadata } from '../worker-protocol';
+import {
+  CelestialBodyVisual,
+  CelestialMaterialLibrary,
+} from './celestial-body-visual';
 
 export type QualityLevel = 'low' | 'balanced' | 'high';
 
@@ -48,12 +43,13 @@ export interface BodySelection {
 interface QualityProfile {
   readonly maximumPixelRatio: number;
   readonly starCount: number;
+  readonly exposure: number;
 }
 
 const QUALITY_PROFILES: Record<QualityLevel, QualityProfile> = {
-  low: { maximumPixelRatio: 1, starCount: 350 },
-  balanced: { maximumPixelRatio: 1.5, starCount: 700 },
-  high: { maximumPixelRatio: 2, starCount: 1_200 },
+  low: { maximumPixelRatio: 1, starCount: 350, exposure: 1.05 },
+  balanced: { maximumPixelRatio: 1.5, starCount: 700, exposure: 1.12 },
+  high: { maximumPixelRatio: 2, starCount: 1_200, exposure: 1.18 },
 };
 
 const MAXIMUM_STARS = QUALITY_PROFILES.high.starCount;
@@ -135,9 +131,7 @@ export class OrbitalRenderer {
   private readonly camera = new PerspectiveCamera(42, 1, 0.01, 250);
   private readonly controls: OrbitControls;
   private readonly resizeObserver: ResizeObserver;
-  private readonly transform = new Matrix4();
   private readonly position = new Vector3();
-  private readonly scale = new Vector3();
   private readonly color = new Color();
   private readonly raycaster = new Raycaster();
   private readonly pointer = new Vector2();
@@ -145,14 +139,12 @@ export class OrbitalRenderer {
   private readonly focusDirection = new Vector3();
   private readonly starField: Points;
   private readonly glowTexture: CanvasTexture;
+  private readonly materialLibrary: CelestialMaterialLibrary;
   private readonly selectionRing: Mesh<RingGeometry, MeshBasicMaterial>;
-  private readonly primaryLight = new PointLight(0xffffff, 18, 0, 1.5);
+  private readonly primaryLight = new PointLight(0xffffff, 34, 0, 1.5);
   private quality: QualityLevel = 'balanced';
   private bodies: readonly BodyMetadata[] = [];
-  private bodyMesh: InstancedMesh | undefined;
-  private glowMesh: InstancedMesh | undefined;
-  private starGlows: Array<{ readonly bodyIndex: number; readonly sprite: Sprite }> = [];
-  private planetaryRings: Array<{ readonly bodyIndex: number; readonly mesh: Mesh }> = [];
+  private bodyVisuals: CelestialBodyVisual[] = [];
   private trails: BodyTrail[] = [];
   private velocityVectors: LineSegments | undefined;
   private previousPositions = new Float32Array();
@@ -180,7 +172,10 @@ export class OrbitalRenderer {
     this.renderer.setClearColor(0x000000, 0);
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.2;
+    this.renderer.toneMappingExposure = 1.12;
+    this.materialLibrary = new CelestialMaterialLibrary(
+      this.renderer.capabilities.getMaxAnisotropy(),
+    );
 
     this.camera.position.set(0, -7, 6);
     this.controls = new OrbitControls(this.camera, canvas);
@@ -195,9 +190,8 @@ export class OrbitalRenderer {
     this.starField = this.createStarField();
     this.selectionRing = this.createSelectionRing();
     this.scene.add(this.starField);
-    this.scene.add(new AmbientLight(0x8ba8c9, 1.55));
+    this.scene.add(new AmbientLight(0x7390ad, 0.32));
     this.scene.add(this.primaryLight);
-    this.scene.add(this.createReferenceGrid());
     this.scene.add(this.selectionRing);
 
     this.canvas.addEventListener('pointerdown', this.handlePointerDown);
@@ -223,30 +217,17 @@ export class OrbitalRenderer {
     this.selectionRing.visible = false;
     this.onBodySelected(undefined);
 
-    const geometry = new SphereGeometry(1, 28, 18);
-    const bodyMaterial = new MeshStandardMaterial({
-      color: 0xffffff,
-      vertexColors: false,
-      roughness: 0.72,
-      metalness: 0.02,
+    this.bodyVisuals = bodies.map((body, bodyIndex) => {
+      const visual = new CelestialBodyVisual(
+        body,
+        bodyIndex,
+        this.quality,
+        this.materialLibrary,
+        this.glowTexture,
+      );
+      this.scene.add(visual.root);
+      return visual;
     });
-    const glowMaterial = new MeshBasicMaterial({
-      color: 0xffffff,
-      vertexColors: false,
-      transparent: true,
-      opacity: 0.1,
-      side: BackSide,
-      depthWrite: false,
-      blending: AdditiveBlending,
-      toneMapped: false,
-    });
-
-    this.bodyMesh = new InstancedMesh(geometry, bodyMaterial, bodies.length);
-    this.glowMesh = new InstancedMesh(geometry.clone(), glowMaterial, bodies.length);
-    this.bodyMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    this.glowMesh.instanceMatrix.setUsage(DynamicDrawUsage);
-    this.bodyMesh.frustumCulled = false;
-    this.glowMesh.frustumCulled = false;
 
     const sampleInterval = Math.max(trailSpan / TRAIL_POINT_CAPACITY, 0.002);
     this.trails = bodies.map((body) => {
@@ -257,27 +238,16 @@ export class OrbitalRenderer {
     this.velocityVectors = this.createVelocityVectors(bodies);
     this.velocityVectors.visible = this.velocityVectorsVisible;
     this.scene.add(this.velocityVectors);
-    this.createBodyAccents(bodies);
     this.previousPositions = new Float32Array(positions);
     this.previousTime = 0;
     this.velocityScale = cameraDistance * 0.032;
 
-    const instanceColors = new Float32Array(bodies.length * 3);
-    bodies.forEach((body, index) => {
-      this.color.set(body.color);
-      this.color.toArray(instanceColors, index * 3);
-    });
-    this.bodyMesh.instanceColor = new InstancedBufferAttribute(instanceColors, 3);
-    this.glowMesh.instanceColor = new InstancedBufferAttribute(instanceColors.slice(), 3);
-
-    this.scene.add(this.glowMesh);
-    this.scene.add(this.bodyMesh);
     this.focus(cameraDistance);
     this.update(positions, 0);
   }
 
   update(positions: Float32Array, time: number): void {
-    if (this.bodyMesh === undefined || this.glowMesh === undefined) {
+    if (this.bodyVisuals.length === 0) {
       return;
     }
 
@@ -288,30 +258,13 @@ export class OrbitalRenderer {
       const x = positions[offset] ?? 0;
       const y = positions[offset + 1] ?? 0;
       const z = positions[offset + 2] ?? 0;
-      const radius = this.bodies[bodyIndex]?.radius ?? 0.05;
-
       this.position.set(x, y, z);
-      this.scale.setScalar(radius);
-      this.transform.compose(this.position, this.bodyMesh.quaternion, this.scale);
-      this.bodyMesh.setMatrixAt(bodyIndex, this.transform);
-
-      this.scale.setScalar(radius * 1.8);
-      this.transform.compose(this.position, this.glowMesh.quaternion, this.scale);
-      this.glowMesh.setMatrixAt(bodyIndex, this.transform);
+      this.bodyVisuals[bodyIndex]?.update(this.position, time);
       this.trails[bodyIndex]?.sample(x, y, z, time);
     }
 
-    for (const { bodyIndex, sprite } of this.starGlows) {
-      const offset = bodyIndex * 3;
-      sprite.position.fromArray(positions, offset);
-    }
-
-    for (const { bodyIndex, mesh } of this.planetaryRings) {
-      const offset = bodyIndex * 3;
-      mesh.position.fromArray(positions, offset);
-    }
-
-    const primaryBodyIndex = this.getPrimaryBodyIndex();
+    const primaryBodyIndex = this.getPrimaryLuminousBodyIndex();
+    this.primaryLight.visible = primaryBodyIndex !== undefined;
     if (primaryBodyIndex !== undefined) {
       this.primaryLight.position.fromArray(positions, primaryBodyIndex * 3);
       this.primaryLight.color.set(this.bodies[primaryBodyIndex]?.color ?? 0xffffff);
@@ -319,8 +272,6 @@ export class OrbitalRenderer {
 
     this.updateSelectionRing(positions);
 
-    this.bodyMesh.instanceMatrix.needsUpdate = true;
-    this.glowMesh.instanceMatrix.needsUpdate = true;
     this.previousPositions.set(positions);
     this.previousTime = time;
   }
@@ -339,7 +290,10 @@ export class OrbitalRenderer {
     const profile = QUALITY_PROFILES[quality];
     const devicePixelRatio = window.devicePixelRatio || 1;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, profile.maximumPixelRatio));
+    this.renderer.toneMappingExposure = profile.exposure;
     this.starField.geometry.setDrawRange(0, profile.starCount);
+    this.materialLibrary.setQuality(quality);
+    this.bodyVisuals.forEach((visual) => visual.setQuality(quality));
     this.resize();
   }
 
@@ -374,7 +328,11 @@ export class OrbitalRenderer {
 
     this.selectBody(index);
     this.followedBodyIndex = index;
-    this.focusDistance = Math.max(body.radius * 10, this.systemCameraDistance * 0.025, 0.42);
+    this.focusDistance = Math.max(
+      body.renderRadius * (body.kind === 'black-hole' ? 10 : 7),
+      this.systemCameraDistance * 0.018,
+      0.3,
+    );
     this.focusInProgress = true;
   }
 
@@ -405,6 +363,7 @@ export class OrbitalRenderer {
     this.selectionRing.geometry.dispose();
     this.selectionRing.material.dispose();
     this.glowTexture.dispose();
+    this.materialLibrary.dispose();
     this.renderer.dispose();
   }
 
@@ -419,19 +378,11 @@ export class OrbitalRenderer {
   }
 
   private disposeBodies(): void {
-    if (this.bodyMesh !== undefined) {
-      this.scene.remove(this.bodyMesh);
-      this.bodyMesh.geometry.dispose();
-      (this.bodyMesh.material as MeshStandardMaterial).dispose();
-      this.bodyMesh = undefined;
+    for (const visual of this.bodyVisuals) {
+      this.scene.remove(visual.root);
+      visual.dispose();
     }
-
-    if (this.glowMesh !== undefined) {
-      this.scene.remove(this.glowMesh);
-      this.glowMesh.geometry.dispose();
-      (this.glowMesh.material as MeshBasicMaterial).dispose();
-      this.glowMesh = undefined;
-    }
+    this.bodyVisuals = [];
 
     for (const trail of this.trails) {
       this.scene.remove(trail.line);
@@ -439,19 +390,6 @@ export class OrbitalRenderer {
     }
 
     this.trails = [];
-
-    for (const { sprite } of this.starGlows) {
-      this.scene.remove(sprite);
-      (sprite.material as SpriteMaterial).dispose();
-    }
-    this.starGlows = [];
-
-    for (const { mesh } of this.planetaryRings) {
-      this.scene.remove(mesh);
-      mesh.geometry.dispose();
-      (mesh.material as MeshBasicMaterial).dispose();
-    }
-    this.planetaryRings = [];
 
     if (this.velocityVectors !== undefined) {
       this.scene.remove(this.velocityVectors);
@@ -462,16 +400,6 @@ export class OrbitalRenderer {
 
     this.previousPositions = new Float32Array();
     this.previousTime = 0;
-  }
-
-  private createReferenceGrid(): GridHelper {
-    const grid = new GridHelper(40, 40, 0x285077, 0x16263a);
-    grid.rotation.x = Math.PI / 2;
-    const material = grid.material as LineBasicMaterial;
-    material.transparent = true;
-    material.opacity = 0.08;
-    material.depthWrite = false;
-    return grid;
   }
 
   private createStarField(): Points {
@@ -559,45 +487,6 @@ export class OrbitalRenderer {
     return texture;
   }
 
-  private createBodyAccents(bodies: readonly BodyMetadata[]): void {
-    bodies.forEach((body, bodyIndex) => {
-      if (body.radius >= 0.14) {
-        const sprite = new Sprite(
-          new SpriteMaterial({
-            map: this.glowTexture,
-            color: body.color,
-            transparent: true,
-            opacity: 0.72,
-            blending: AdditiveBlending,
-            depthWrite: false,
-            toneMapped: false,
-          }),
-        );
-        const glowSize = body.radius * 6.2;
-        sprite.scale.set(glowSize, glowSize, 1);
-        sprite.renderOrder = -1;
-        this.starGlows.push({ bodyIndex, sprite });
-        this.scene.add(sprite);
-      }
-
-      if (/saturn/i.test(`${body.id} ${body.name}`)) {
-        const geometry = new RingGeometry(body.radius * 1.45, body.radius * 2.35, 72);
-        const material = new MeshBasicMaterial({
-          color: 0xd6c39c,
-          transparent: true,
-          opacity: 0.66,
-          side: DoubleSide,
-          depthWrite: false,
-        });
-        const ring = new Mesh(geometry, material);
-        ring.rotation.x = 0.35;
-        ring.rotation.y = -0.18;
-        this.planetaryRings.push({ bodyIndex, mesh: ring });
-        this.scene.add(ring);
-      }
-    });
-  }
-
   private updateSelectionRing(positions: Float32Array): void {
     if (this.selectedBodyIndex === undefined || !this.selectionRing.visible) {
       return;
@@ -611,7 +500,7 @@ export class OrbitalRenderer {
 
     this.selectionRing.position.fromArray(positions, offset);
     this.selectionRing.scale.setScalar(
-      Math.max(body.radius, this.systemCameraDistance * 0.0045),
+      Math.max(body.renderRadius, this.systemCameraDistance * 0.0045),
     );
   }
 
@@ -650,14 +539,14 @@ export class OrbitalRenderer {
     }
   }
 
-  private getPrimaryBodyIndex(): number | undefined {
-    if (this.bodies.length === 0) {
-      return undefined;
-    }
-
-    let primaryBodyIndex = 0;
-    for (let bodyIndex = 1; bodyIndex < this.bodies.length; bodyIndex += 1) {
-      if ((this.bodies[bodyIndex]?.mass ?? 0) > (this.bodies[primaryBodyIndex]?.mass ?? 0)) {
+  private getPrimaryLuminousBodyIndex(): number | undefined {
+    let primaryBodyIndex: number | undefined;
+    for (let bodyIndex = 0; bodyIndex < this.bodies.length; bodyIndex += 1) {
+      if (
+        this.bodies[bodyIndex]?.kind === 'star' &&
+        (primaryBodyIndex === undefined ||
+          (this.bodies[bodyIndex]?.mass ?? 0) > (this.bodies[primaryBodyIndex]?.mass ?? 0))
+      ) {
         primaryBodyIndex = bodyIndex;
       }
     }
@@ -672,7 +561,7 @@ export class OrbitalRenderer {
   private readonly handlePointerUp = (event: PointerEvent): void => {
     if (
       Math.hypot(event.clientX - this.pointerDownX, event.clientY - this.pointerDownY) > 6 ||
-      this.bodyMesh === undefined
+      this.bodyVisuals.length === 0
     ) {
       return;
     }
@@ -681,8 +570,11 @@ export class OrbitalRenderer {
     this.pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
     this.pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    const intersections = this.raycaster.intersectObject(this.bodyMesh, false);
-    const bodyIndex = intersections[0]?.instanceId;
+    const intersections = this.raycaster.intersectObjects(
+      this.bodyVisuals.map((visual) => visual.pickMesh),
+      false,
+    );
+    const bodyIndex = intersections[0]?.object.userData.bodyIndex as number | undefined;
     this.selectBody(bodyIndex);
   };
 
