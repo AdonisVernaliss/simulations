@@ -558,7 +558,7 @@ export class CelestialBodyVisual {
           new MeshBasicMaterial({
             color: 0xbcefff,
             transparent: true,
-            opacity: 0.17,
+            opacity: 0.052,
             blending: AdditiveBlending,
             depthWrite: false,
             side: DoubleSide,

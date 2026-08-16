@@ -287,7 +287,7 @@ export class OrbitalRenderer {
 
     const primaryBodyIndex = this.getPrimaryLuminousBodyIndex();
     this.primaryLight.visible = primaryBodyIndex !== undefined;
-    this.ambientLight.intensity = primaryBodyIndex === undefined ? 1.08 : 0.52;
+    this.ambientLight.intensity = primaryBodyIndex === undefined ? 1.32 : 0.52;
     if (primaryBodyIndex !== undefined) {
       this.primaryLight.position.fromArray(positions, primaryBodyIndex * 3);
       this.primaryLight.color.set(this.bodies[primaryBodyIndex]?.color ?? 0xffffff);
@@ -592,10 +592,16 @@ export class OrbitalRenderer {
   private getPrimaryLuminousBodyIndex(): number | undefined {
     let primaryBodyIndex: number | undefined;
     for (let bodyIndex = 0; bodyIndex < this.bodies.length; bodyIndex += 1) {
+      const body = this.bodies[bodyIndex];
+      const isLuminous =
+        body?.kind === 'star' ||
+        body?.kind === 'pulsar' ||
+        body?.kind === 'neutron-star' ||
+        body?.surface === 'quasar';
       if (
-        this.bodies[bodyIndex]?.kind === 'star' &&
+        isLuminous &&
         (primaryBodyIndex === undefined ||
-          (this.bodies[bodyIndex]?.mass ?? 0) > (this.bodies[primaryBodyIndex]?.mass ?? 0))
+          (body?.mass ?? 0) > (this.bodies[primaryBodyIndex]?.mass ?? 0))
       ) {
         primaryBodyIndex = bodyIndex;
       }
