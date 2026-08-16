@@ -35,15 +35,14 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-## TESS all-sky mosaic
+## Gaia EDR3 all-sky colour map
 
-The three `public/textures/sky/tess-all-sky-*.jpg` files are resolution
-variants of the all-sky cylindrical projection published by NASA's Scientific
-Visualization Studio:
+The three `public/textures/sky/gaia-edr3-all-sky-*.jpg` files are resolution
+variants of the equirectangular all-sky colour map published by the European
+Space Agency:
 
-- Source: https://svs.gsfc.nasa.gov/14265/
-- Credit: NASA/MIT/TESS and Ethan Kruse (University of Maryland College Park)
-- Usage: NASA Images and Media Usage Guidelines
+- Source: https://www.esa.int/ESA_Multimedia/Images/2020/12/The_colour_of_the_sky_from_Gaia_s_Early_Data_Release_32
+- Credit: ESA/Gaia/DPAC; acknowledgement: A. Moitinho
+- License: CC BY-SA 3.0 IGO or ESA Standard Licence
 
-NASA should be acknowledged as the source. The imagery must not be used in a
-way that implies NASA endorsement.
+These local resolution variants are distributed under CC BY-SA 3.0 IGO.

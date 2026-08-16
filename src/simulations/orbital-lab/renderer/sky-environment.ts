@@ -14,9 +14,9 @@ import {
 import type { QualityLevel } from './orbital-renderer';
 
 const SKY_TEXTURES: Record<QualityLevel, string> = {
-  low: '/textures/sky/tess-all-sky-low.jpg',
-  balanced: '/textures/sky/tess-all-sky-balanced.jpg',
-  high: '/textures/sky/tess-all-sky-high.jpg',
+  low: '/textures/sky/gaia-edr3-all-sky-low.jpg',
+  balanced: '/textures/sky/gaia-edr3-all-sky-balanced.jpg',
+  high: '/textures/sky/gaia-edr3-all-sky-high.jpg',
 };
 
 const SKY_VERTEX_SHADER = `
