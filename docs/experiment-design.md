@@ -81,6 +81,8 @@ The interface does not reuse the light-ray integrator to fake a stellar orbit or
 - WebGL assets remain procedural and quality-adaptive.
 - Ordinary scenes bypass compact-object post-processing, and hidden overlays skip their GPU updates.
 - Display-only diagnostics run at their visible refresh rate without reducing physics steps.
+- Exact direct gravity is retained below the measured crossover; approximate tree gravity is never selected merely because a device reports a low frame rate.
+- Collision broad-phase pruning may remove only geometrically impossible pairs, so device adaptation cannot change contact outcomes.
 - Hidden documents do not advance expensive simulations.
 - New experiments add no network request and no dependency by default.
 

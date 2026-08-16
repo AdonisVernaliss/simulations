@@ -97,6 +97,8 @@ See the [Quasar thin-disk model card](docs/thin-disk.md) for equations, assumpti
 
 - Physics runs in a dedicated Web Worker.
 - Frame data uses a recycled transferable buffer.
+- Small and medium systems use exact pairwise Float64 gravity; a pooled Barnes–Hut octree is available only beyond the calibrated crossover, with the active solver shown in the HUD.
+- Collision contact remains exact while a sweep-and-prune broad phase removes distant pairs from detailed checks.
 - Display-only energy diagnostics are sampled at the interface refresh rate rather than at the physics-frame rate.
 - Bounded per-body meshes support distinct surfaces, compact-object emission, selection, and quality-dependent geometry.
 - Trails use fixed-size circular GPU buffers.

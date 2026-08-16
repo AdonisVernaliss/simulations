@@ -22,6 +22,21 @@ The simulation uses normalized units with `G = 1`. Here `m_j` is the normalized 
 
 The force calculation is pairwise and symmetric. Each interaction applies equal and opposite momentum changes, subject only to floating-point rounding.
 
+### Adaptive force evaluation
+
+The default solver is adaptive but deliberately keeps every current interactive scene on the exact direct kernel:
+
+- direct summation uses Float64 typed arrays and one symmetric evaluation for each unique pair;
+- the current interactive limit is 128 bodies, far below the measured tree crossover;
+- the automatic Barnes–Hut path begins only above 2,048 bodies;
+- either path can be forced in tests through the simulation options.
+
+For larger datasets, Barnes–Hut rebuilds a three-dimensional octree on every force evaluation. Leaves retain up to four bodies; sufficiently distant nodes are represented by their total mass and center of mass. The opening criterion uses `θ = 0.5`, giving expected `O(N log N)` rather than direct `O(N²)` work. Its arrays are pooled and reused so fixed steps do not create a new object graph for garbage collection. A uniform acceleration correction removes residual center-of-mass acceleration introduced by the asymmetric approximation.
+
+Barnes–Hut is not mathematically identical to direct summation. A deterministic 320-body reference test requires RMS acceleration error below `0.3%`, finite output for degenerate positions with softening, and a total mass-weighted acceleration below `10⁻¹⁰`. This bound validates the tested distribution, not every possible adversarial arrangement. Tight few-body encounters stay direct under the automatic policy.
+
+Collision detection uses a separate exact policy. Up to 48 bodies it performs an allocation-free ordered scan. Larger sets use sweep-and-prune on physical-radius intervals along one axis, reject separated `y` and `z` intervals, and finally apply the exact three-dimensional sphere-overlap test. It returns the same first indexed collision as the former all-pairs scan; only impossible distant candidates are skipped.
+
 ### Softening
 
 The `ε` term is Plummer-style gravitational softening. It prevents the point-mass force from diverging at zero separation and improves numerical stability during close approaches. It also changes the force law at distances comparable to `ε`, so close-encounter trajectories are not exact Newtonian point-mass solutions.
@@ -161,6 +176,9 @@ The test suite checks:
 - closure of an equal-mass circular binary after one analytic period;
 - relative energy drift below `10⁻⁶` over repeated binary orbits;
 - conservation of total linear momentum;
+- exact direct-force symmetry and bounded Barnes–Hut force error;
+- zero center-of-mass acceleration after tree-force correction;
+- equivalence of sweep-and-prune and ordered all-pairs collision detection;
 - conservation of mass and momentum during collision merging;
 - classification of accretion, hit-and-run, disruption, capture, and black-hole merger regimes;
 - inverse-cube scaling of the tidal-stress indicator;
@@ -196,6 +214,7 @@ Open publication does not automatically permit copying code or datasets. Equatio
 - A. Chenciner and R. Montgomery, [A remarkable periodic solution of the three-body problem in the case of equal masses](https://arxiv.org/abs/math/0011268), *Annals of Mathematics* 152 (2000), 881–901.
 - W. C. Swope et al., [A computer simulation method for the calculation of equilibrium constants for the formation of physical clusters of molecules](https://doi.org/10.1063/1.442716), *The Journal of Chemical Physics* 76 (1982), 637–649.
 - W. Dehnen, [Towards optimal softening in three-dimensional N-body codes](https://arxiv.org/abs/astro-ph/0011568), *Monthly Notices of the Royal Astronomical Society* 324 (2001), 273–291.
+- J. Barnes and P. Hut, [A hierarchical O(N log N) force-calculation algorithm](https://doi.org/10.1038/324446a0), *Nature* 324 (1986), 446–449.
 - Z. M. Leinhardt and S. T. Stewart, [Collisions Between Gravity-Dominated Bodies: I. Outcome Regimes and Scaling Laws](https://arxiv.org/abs/1106.6084), *The Astrophysical Journal* 745 (2012), 79.
 - M. Ishii, M. Shibata, and Y. Mino, [Black hole tidal problem in the Fermi normal coordinates](https://arxiv.org/abs/gr-qc/0501084), *Physical Review D* 71 (2005), 044017.
 - M. Kesden, [Tidal disruption rate of stars by spinning supermassive black holes](https://arxiv.org/abs/1109.6329), *Physical Review D* 85 (2012), 024037.
