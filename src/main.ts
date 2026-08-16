@@ -37,6 +37,13 @@ const start = async (): Promise<void> => {
     return;
   }
 
+  if (lab.id === 'particle') {
+    const { ParticleLab } = await import('./simulations/particle-lab/particle-lab');
+    document.title = 'Particle Track Lab';
+    new ParticleLab(app).start();
+    return;
+  }
+
   new ResearchWorkspace(app, lab).start();
 };
 

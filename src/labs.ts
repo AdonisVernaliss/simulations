@@ -31,7 +31,7 @@ export const labs: readonly LabDefinition[] = [
     name: 'Particle Physics',
     field: 'High-energy physics',
     summary: 'Inspect relativistic charged-particle tracks, decays, and conservation laws.',
-    status: 'research',
+    status: 'available',
     model: 'Relativistic kinematics · Lorentz force · evaluated particle data',
   },
   {
