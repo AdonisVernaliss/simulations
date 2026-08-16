@@ -379,8 +379,10 @@ export class OrbitalRenderer {
 
     this.selectBody(index);
     this.followedBodyIndex = index;
+    const blackHoleFocusScale =
+      body.surface === 'accretion-disk' || body.surface === 'quasar' ? 18 : 10;
     this.focusDistance = Math.max(
-      body.renderRadius * (body.kind === 'black-hole' ? 10 : 7),
+      body.renderRadius * (body.kind === 'black-hole' ? blackHoleFocusScale : 7),
       this.systemCameraDistance * 0.018,
       0.3,
     );
@@ -671,9 +673,12 @@ export class OrbitalRenderer {
 
       const centerX = bounds.left + (this.focusTarget.x * 0.5 + 0.5) * bounds.width;
       const centerY = bounds.top + (-this.focusTarget.y * 0.5 + 0.5) * bounds.height;
+      const compactPickScale =
+        body.surface === 'accretion-disk' || body.surface === 'quasar' ? 6.2 : 1.5;
       const visibleDiskRadius = Math.max(
         18,
-        (body.renderRadius * bounds.height * 2.05) / (cameraDistance * halfVerticalField),
+        (body.renderRadius * bounds.height * compactPickScale) /
+          (cameraDistance * halfVerticalField),
       );
       const pointerDistance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
       if (pointerDistance <= visibleDiskRadius && pointerDistance < closestPointerDistance) {
