@@ -23,6 +23,7 @@ type OrbitalExperimentId =
   | 'black-hole-flyby'
   | 'black-hole-binary'
   | 'black-hole-merger'
+  | 'accreting-black-hole'
   | 'quasar-system'
   | 'pulsar-system'
   | 'neutron-star-binary'
@@ -59,6 +60,13 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     title: 'Horizons combine and radiate energy',
     question: 'Why is the final black hole lighter than the two initial masses added together?',
     observation: 'The retained remnant carries momentum; the event card reports the estimated mass-equivalent gravitational radiation.',
+  },
+  {
+    id: 'accreting-black-hole',
+    label: 'Accreting black hole',
+    title: 'Light maps curved spacetime',
+    question: 'Why can the rear face of a thin disk appear above and below the shadow?',
+    observation: 'Orbit the camera: precomputed Schwarzschild null geodesics bend rays from both sides of the disk into view around a 2.598 rₛ shadow.',
   },
   {
     id: 'quasar-system',
@@ -474,7 +482,11 @@ export class OrbitalLab {
       const readNumber = (name: string): number => Number(values.get(name));
       const name = String(values.get('name') ?? '').trim();
       const requestedKind = String(values.get('kind') ?? 'rocky');
-      const kind = (requestedKind === 'quasar' ? 'black-hole' : requestedKind) as BodyMetadata['kind'];
+      const kind = (
+        requestedKind === 'quasar' || requestedKind === 'accreting-black-hole'
+          ? 'black-hole'
+          : requestedKind
+      ) as BodyMetadata['kind'];
       const mass = readNumber('mass');
       const radius = readNumber('radius');
       const renderRadius = readNumber('render-radius');
@@ -506,6 +518,8 @@ export class OrbitalLab {
         surface:
           requestedKind === 'quasar'
             ? 'quasar'
+            : requestedKind === 'accreting-black-hole'
+              ? 'accretion-disk'
             : kind === 'star'
               ? 'sun'
               : kind === 'black-hole'
@@ -687,9 +701,11 @@ export class OrbitalLab {
           : selection.body.id === 'tidally-stretched-star'
             ? 'The shape follows the black hole’s tidal gradient. Stretching rises as inverse distance cubed; near a stress ratio of one, the leading tidal acceleration across the star matches its surface self-gravity. Fluid breakup is not simulated.'
           : selection.body.surface === 'quasar'
-          ? 'Active object: the central mass is a black hole. The inclined disk and bipolar jet are emission overlays; nearby bodies still interact with the black hole through the shared gravity solver.'
+          ? 'Active Schwarzschild object: null geodesics form a 2.598 rₛ shadow and show the rear face of the thin disk above and below it. The disk begins at the 3 rₛ ISCO. Jets are qualitative emission cones; all bodies still share the gravity solver.'
+          : selection.body.surface === 'accretion-disk'
+            ? 'Accreting Schwarzschild black hole: the event horizon is at rₛ, the unstable photon sphere at 1.5 rₛ, and the critical shadow radius is 3√3/2 rₛ ≈ 2.598 rₛ. Rays and both disk intersections come from precomputed null geodesics; the thin disk starts at the 3 rₛ ISCO.'
           : selection.body.kind === 'black-hole'
-            ? 'Black centre: observable shadow. Fine rim: photon-ring cue. The broad 3D band is an inclined accretion disk; orbit the camera to change its projection and beamed bright side. Background light is gravitationally lensed. The event horizon lies inside the shadow.'
+            ? 'Naked Schwarzschild black hole: no emitting disk is assumed. The horizon is at rₛ, photons can orbit only unstably at 1.5 rₛ, and bent background light outlines the critical 3√3/2 rₛ ≈ 2.598 rₛ shadow.'
             : selection.body.kind === 'pulsar'
               ? 'A rotating neutron star. The cones mark an idealized magnetic-axis lighthouse beam; the object itself has mass and participates in every N-body interaction.'
               : selection.body.kind === 'neutron-star'
@@ -940,6 +956,7 @@ export class OrbitalLab {
                 <option value="ice-giant">Ice giant</option>
                 <option value="star">Star</option>
                 <option value="black-hole">Black hole</option>
+                <option value="accreting-black-hole">Black hole · accretion disk</option>
                 <option value="quasar">Active black hole · quasar</option>
                 <option value="neutron-star">Neutron star</option>
                 <option value="pulsar">Pulsar</option>

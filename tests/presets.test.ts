@@ -79,13 +79,19 @@ describe('orbital presets', () => {
   });
 
   it('includes active, neutron-star, and pulsar systems as massive shared-scene objects', () => {
+    const accreting = presets.find((preset) => preset.id === 'accreting-black-hole');
     const quasar = presets.find((preset) => preset.id === 'quasar-system');
     const pulsarSystem = presets.find((preset) => preset.id === 'pulsar-system');
     const neutronBinary = presets.find((preset) => preset.id === 'neutron-star-binary');
     const activeNucleus = quasar?.bodies.find((body) => body.surface === 'quasar');
+    const accretingPrimary = accreting?.bodies.find(
+      (body) => body.surface === 'accretion-disk',
+    );
     const pulsar = pulsarSystem?.bodies.find((body) => body.kind === 'pulsar');
 
     expect(activeNucleus?.kind).toBe('black-hole');
+    expect(accretingPrimary?.kind).toBe('black-hole');
+    expect(accretingPrimary!.radius / accretingPrimary!.mass).toBeCloseTo(0.02, 12);
     expect(activeNucleus!.radius / activeNucleus!.mass).toBeCloseTo(0.02, 12);
     expect(pulsar?.mass).toBeGreaterThan(1);
     expect(
