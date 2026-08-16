@@ -172,63 +172,76 @@ const BLACK_HOLE_VERTEX_SHADER = `
 `;
 
 const BLACK_HOLE_FRAGMENT_SHADER = `
-  uniform float uTime;
+  uniform float uInclination;
   varying vec2 vUvPosition;
+
+  void main() {
+    vec2 p = vUvPosition;
+    float radius = length(p);
+    float angle = atan(p.y, p.x);
+    float shadow = 1.0 - smoothstep(0.515, 0.535, radius);
+    float photonRing = exp(-abs(radius - 0.575) * 150.0);
+    float arcRadius = 0.69 + 0.035 * cos(angle * 2.0);
+    float lensedArc = exp(-abs(radius - arcRadius) * 75.0);
+    lensedArc *= smoothstep(0.10, 0.32, abs(p.y));
+    lensedArc *= mix(0.18, 0.9, uInclination);
+    vec3 ringColor = mix(vec3(1.0, 0.42, 0.10), vec3(0.92, 0.97, 1.0), smoothstep(-0.75, 0.75, p.x));
+    vec3 color = ringColor * (photonRing * 1.45 + lensedArc * 0.52);
+    color *= 1.0 - shadow;
+    float alpha = max(shadow, clamp(photonRing + lensedArc, 0.0, 1.0));
+    if (alpha < 0.008) discard;
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
+const ACCRETION_DISK_VERTEX_SHADER = `
+  varying vec2 vDiskPosition;
+  varying vec3 vWorldPosition;
+  varying vec3 vWorldTangent;
+
+  void main() {
+    vDiskPosition = position.xy;
+    vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+    vWorldPosition = worldPosition.xyz;
+    vec3 localTangent = normalize(vec3(-position.y, position.x, 0.0));
+    vWorldTangent = normalize(mat3(modelMatrix) * localTangent);
+    gl_Position = projectionMatrix * viewMatrix * worldPosition;
+  }
+`;
+
+const ACCRETION_DISK_FRAGMENT_SHADER = `
+  uniform float uVisualTime;
+  uniform float uActivity;
+  varying vec2 vDiskPosition;
+  varying vec3 vWorldPosition;
+  varying vec3 vWorldTangent;
 
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
   }
 
   void main() {
-    vec2 p = vUvPosition;
-    float radius = length(p);
-    float angle = atan(p.y, p.x);
-
-    // A thin inclined disk: the outer annuli are amber and the hotter inner edge is pale.
-    float diskRadius = length(vec2(p.x, p.y / 0.105));
-    float diskWindow = smoothstep(0.29, 0.34, diskRadius) * (1.0 - smoothstep(0.82, 0.98, diskRadius));
-    float diskStriation = 0.78 + 0.22 * sin(diskRadius * 86.0 - uTime * 1.6 + hash(floor(p * 90.0)) * 2.5);
-    float primaryDisk = diskWindow * diskStriation;
-
-    // Far-side disk light appears above and below the shadow after strong lensing.
-    float lensedRadius = 0.345 + 0.028 * cos(angle * 2.0);
-    float lensedArc = exp(-abs(radius - lensedRadius) * 95.0);
-    lensedArc *= smoothstep(0.055, 0.19, abs(p.y));
-    lensedArc *= 0.62 + 0.38 * smoothstep(0.0, 0.7, abs(p.x));
-
-    float photonRing = exp(-abs(radius - 0.274) * 190.0);
-    float heat = 1.0 - smoothstep(0.28, 0.96, max(diskRadius, radius));
-    float approaching = mix(0.46, 1.18, smoothstep(-0.9, 0.9, p.x));
-    vec3 outerColor = vec3(0.92, 0.34, 0.075);
-    vec3 innerColor = vec3(1.0, 0.95, 0.78);
-    vec3 diskColor = mix(outerColor, innerColor, heat) * approaching;
-    vec3 ringColor = mix(vec3(1.0, 0.58, 0.22), vec3(0.88, 0.94, 1.0), smoothstep(-0.7, 0.8, p.x));
-
-    float shadow = 1.0 - smoothstep(0.245, 0.258, radius);
-    float emission = max(primaryDisk, max(lensedArc, photonRing));
-    vec3 color = diskColor * (primaryDisk + lensedArc * 0.86) + ringColor * photonRing * 1.3;
-    color *= 1.0 - shadow;
-    float alpha = max(shadow, clamp(emission, 0.0, 1.0));
-    if (alpha < 0.008) discard;
-    gl_FragColor = vec4(color, alpha);
-  }
-`;
-
-const QUASAR_JET_FRAGMENT_SHADER = `
-  varying vec2 vUvPosition;
-
-  void main() {
-    vec2 p = vUvPosition;
-    float axial = abs(p.y);
-    float halfWidth = 0.025 + 0.20 * axial;
-    float edge = 1.0 - smoothstep(0.28, 1.0, abs(p.x) / halfWidth);
-    float launch = smoothstep(0.055, 0.17, axial);
-    float fade = 1.0 - smoothstep(0.62, 1.0, axial);
-    float spine = 1.0 - smoothstep(0.0, halfWidth * 0.24, abs(p.x));
-    float alpha = edge * launch * fade * (0.10 + spine * 0.20);
-    if (alpha < 0.004) discard;
-    vec3 color = mix(vec3(0.27, 0.57, 0.84), vec3(0.82, 0.94, 1.0), spine);
-    gl_FragColor = vec4(color, alpha);
+    float radius = length(vDiskPosition);
+    float angle = atan(vDiskPosition.y, vDiskPosition.x);
+    float normalizedRadius = clamp((radius - 1.42) / (4.2 - 1.42), 0.0, 1.0);
+    float innerFade = smoothstep(1.42, 1.58, radius);
+    float outerFade = 1.0 - smoothstep(3.55, 4.2, radius);
+    float turbulence = sin(angle * 11.0 - uVisualTime * 2.4 + radius * 21.0);
+    turbulence += 0.55 * sin(angle * 23.0 - uVisualTime * 3.7 - radius * 37.0);
+    turbulence += (hash(floor(vDiskPosition * 34.0)) - 0.5) * 0.42;
+    float filaments = 0.72 + 0.28 * smoothstep(-0.75, 0.95, turbulence);
+    vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
+    float lineOfSightVelocity = dot(vWorldTangent, viewDirection);
+    float doppler = mix(0.48, 1.62, smoothstep(-0.92, 0.92, lineOfSightVelocity));
+    vec3 outerColor = vec3(0.92, 0.19, 0.025);
+    vec3 middleColor = vec3(1.0, 0.57, 0.12);
+    vec3 innerColor = vec3(1.0, 0.96, 0.82);
+    vec3 color = mix(middleColor, outerColor, smoothstep(0.35, 1.0, normalizedRadius));
+    color = mix(innerColor, color, smoothstep(0.0, 0.42, normalizedRadius));
+    float alpha = innerFade * outerFade * filaments * mix(0.48, 0.92, uActivity);
+    alpha *= 0.68 + 0.32 * (1.0 - normalizedRadius);
+    if (alpha < 0.012) discard;
+    gl_FragColor = vec4(color * doppler * mix(0.86, 1.25, uActivity), alpha);
   }
 `;
 
@@ -413,9 +426,13 @@ export class CelestialBodyVisual {
   private atmosphere: Mesh<SphereGeometry, MeshBasicMaterial> | undefined;
   private ring: Mesh<RingGeometry, Material> | undefined;
   private blackHoleAppearance: Mesh<PlaneGeometry, ShaderMaterial> | undefined;
-  private quasarJetAppearance: Mesh<PlaneGeometry, ShaderMaterial> | undefined;
+  private blackHoleDiskFrame: Group | undefined;
+  private blackHoleDisk: Mesh<RingGeometry, ShaderMaterial> | undefined;
   private compactField: Group | undefined;
   private readonly decorativeMeshes: Mesh[] = [];
+  private readonly diskNormal = new Vector3();
+  private readonly viewDirection = new Vector3();
+  private visualTime = 0;
   private quality: QualityLevel;
 
   constructor(
@@ -467,7 +484,7 @@ export class CelestialBodyVisual {
 
     if (body.kind === 'black-hole') {
       const appearanceMaterial = new ShaderMaterial({
-        uniforms: { uTime: { value: 0 } },
+        uniforms: { uInclination: { value: 0.75 } },
         vertexShader: BLACK_HOLE_VERTEX_SHADER,
         fragmentShader: BLACK_HOLE_FRAGMENT_SHADER,
         transparent: true,
@@ -475,12 +492,32 @@ export class CelestialBodyVisual {
         depthWrite: false,
         toneMapped: false,
       });
-      this.blackHoleAppearance = new Mesh(new PlaneGeometry(8, 8), appearanceMaterial);
-      this.blackHoleAppearance.renderOrder = 3;
+      this.blackHoleAppearance = new Mesh(new PlaneGeometry(3.4, 3.4), appearanceMaterial);
+      this.blackHoleAppearance.renderOrder = 5;
       this.overlay.add(this.blackHoleAppearance);
 
+      this.blackHoleDiskFrame = new Group();
+      this.blackHoleDiskFrame.rotation.set(body.axialTilt, body.axialTilt * 0.24, 0.18);
+      const diskMaterial = new ShaderMaterial({
+        uniforms: {
+          uVisualTime: { value: 0 },
+          uActivity: { value: body.surface === 'quasar' ? 1 : 0.58 },
+        },
+        vertexShader: ACCRETION_DISK_VERTEX_SHADER,
+        fragmentShader: ACCRETION_DISK_FRAGMENT_SHADER,
+        transparent: true,
+        side: DoubleSide,
+        depthWrite: false,
+        blending: AdditiveBlending,
+        toneMapped: false,
+      });
+      this.blackHoleDisk = new Mesh(this.createRingGeometry(1.42, 4.2), diskMaterial);
+      this.blackHoleDisk.renderOrder = 3;
+      this.blackHoleDiskFrame.add(this.blackHoleDisk);
+      this.overlay.add(this.blackHoleDiskFrame);
+
       if (body.surface === 'quasar') {
-        this.addQuasarJets();
+        this.addQuasarJets(this.blackHoleDiskFrame);
       }
     }
 
@@ -523,17 +560,29 @@ export class CelestialBodyVisual {
       }
     }
 
-    if (this.blackHoleAppearance !== undefined) {
-      const timeUniform = this.blackHoleAppearance.material.uniforms.uTime;
-      if (timeUniform !== undefined) {
-        timeUniform.value = time;
-      }
-    }
   }
 
   faceCamera(cameraPosition: Vector3): void {
-    this.blackHoleAppearance?.lookAt(cameraPosition);
-    this.quasarJetAppearance?.lookAt(cameraPosition);
+    if (this.blackHoleAppearance === undefined || this.blackHoleDiskFrame === undefined) {
+      return;
+    }
+
+    this.blackHoleAppearance.lookAt(cameraPosition);
+    this.diskNormal.set(0, 0, 1).applyQuaternion(this.blackHoleDiskFrame.quaternion).normalize();
+    this.viewDirection.subVectors(cameraPosition, this.overlay.position).normalize();
+    const faceOn = Math.abs(this.diskNormal.dot(this.viewDirection));
+    this.blackHoleAppearance.material.uniforms.uInclination!.value = Math.sqrt(
+      Math.max(0, 1 - faceOn * faceOn),
+    );
+  }
+
+  animate(elapsedSeconds: number): void {
+    if (this.blackHoleDisk === undefined) {
+      return;
+    }
+
+    this.visualTime += elapsedSeconds;
+    this.blackHoleDisk.material.uniforms.uVisualTime!.value = this.visualTime;
   }
 
   setQuality(quality: QualityLevel): void {
@@ -551,12 +600,13 @@ export class CelestialBodyVisual {
     }
 
     if (this.ring !== undefined) {
-      const isBlackHole = this.body.kind === 'black-hole';
       this.ring.geometry.dispose();
-      this.ring.geometry = this.createRingGeometry(
-        isBlackHole ? 1.65 : 1.35,
-        isBlackHole ? 3.9 : 2.28,
-      );
+      this.ring.geometry = this.createRingGeometry(1.35, 2.28);
+    }
+
+    if (this.blackHoleDisk !== undefined) {
+      this.blackHoleDisk.geometry.dispose();
+      this.blackHoleDisk.geometry = this.createRingGeometry(1.42, 4.2);
     }
   }
 
@@ -569,6 +619,8 @@ export class CelestialBodyVisual {
     this.ringMaterial?.dispose();
     this.blackHoleAppearance?.geometry.dispose();
     this.blackHoleAppearance?.material.dispose();
+    this.blackHoleDisk?.geometry.dispose();
+    this.blackHoleDisk?.material.dispose();
     for (const mesh of this.decorativeMeshes) {
       mesh.geometry.dispose();
       if (Array.isArray(mesh.material)) {
@@ -639,20 +691,43 @@ export class CelestialBodyVisual {
     this.oriented.add(this.compactField);
   }
 
-  private addQuasarJets(): void {
-    this.quasarJetAppearance = new Mesh(
-      new PlaneGeometry(2.4, 9),
-      new ShaderMaterial({
-        vertexShader: BLACK_HOLE_VERTEX_SHADER,
-        fragmentShader: QUASAR_JET_FRAGMENT_SHADER,
-        transparent: true,
-        depthWrite: false,
-        blending: AdditiveBlending,
-        toneMapped: false,
-      }),
-    );
-    this.quasarJetAppearance.renderOrder = 2;
-    this.overlay.add(this.quasarJetAppearance);
-    this.decorativeMeshes.push(this.quasarJetAppearance);
+  private addQuasarJets(frame: Group): void {
+    for (const direction of [-1, 1]) {
+      const jet = new Mesh(
+        new ConeGeometry(0.72, 12, 32, 1, true),
+        new MeshBasicMaterial({
+          color: 0xb5e9ff,
+          transparent: true,
+          opacity: 0.095,
+          blending: AdditiveBlending,
+          depthWrite: false,
+          side: DoubleSide,
+          toneMapped: false,
+        }),
+      );
+      jet.rotation.x = direction * Math.PI / 2;
+      jet.position.z = direction * 6;
+      jet.renderOrder = 2;
+      frame.add(jet);
+      this.decorativeMeshes.push(jet);
+
+      const spine = new Mesh(
+        new ConeGeometry(0.16, 11, 20, 1, true),
+        new MeshBasicMaterial({
+          color: 0xeaf9ff,
+          transparent: true,
+          opacity: 0.16,
+          blending: AdditiveBlending,
+          depthWrite: false,
+          side: DoubleSide,
+          toneMapped: false,
+        }),
+      );
+      spine.rotation.x = direction * Math.PI / 2;
+      spine.position.z = direction * 5.5;
+      spine.renderOrder = 2;
+      frame.add(spine);
+      this.decorativeMeshes.push(spine);
+    }
   }
 }
