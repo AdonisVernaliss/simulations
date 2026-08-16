@@ -1,6 +1,10 @@
 import './atomic-lab.css';
 
 import {
+  GuidedExperiments,
+  type GuidedExperiment,
+} from '../../core/guided-experiments';
+import {
   BOHR_RADIUS_METRES,
   getHydrogenEnergy,
   getHydrogenState,
@@ -8,6 +12,47 @@ import {
   type HydrogenStateId,
 } from './model/hydrogen';
 import { AtomicRenderer, type AtomicQuality } from './renderer/atomic-renderer';
+
+type AtomicExperimentId = 'probability' | 'ground' | 'radial-node' | 'angular-node';
+
+interface AtomicExperiment extends GuidedExperiment<AtomicExperimentId> {
+  readonly state: HydrogenStateId;
+}
+
+const ATOMIC_EXPERIMENTS: readonly AtomicExperiment[] = [
+  {
+    id: 'probability',
+    label: 'Probability, not orbit',
+    title: 'Read a quantum probability cloud',
+    question: 'Where is an electron likely to be detected in a 2p state?',
+    observation: 'Point density follows |ψ|²; the empty equatorial plane is an angular node.',
+    state: '2p-z',
+  },
+  {
+    id: 'ground',
+    label: 'Ground state',
+    title: 'The simplest bound state',
+    question: 'Why is the 1s cloud spherical and node-free?',
+    observation: 'With l = 0, probability depends only on distance from the nucleus.',
+    state: '1s',
+  },
+  {
+    id: 'radial-node',
+    label: 'Radial node',
+    title: 'Find a forbidden spherical shell',
+    question: 'Can probability vanish at one radius without a physical barrier?',
+    observation: 'The 2s wavefunction changes sign at r = 2a₀, leaving a spherical node.',
+    state: '2s',
+  },
+  {
+    id: 'angular-node',
+    label: 'Angular nodes',
+    title: 'Let angular momentum shape the cloud',
+    question: 'How does l = 2 differ from a p orbital?',
+    observation: 'The 3d z² state has two conical nodes fixed by its angular wavefunction.',
+    state: '3d-z2',
+  },
+] as const;
 
 const requireElement = <ElementType extends Element>(
   root: ParentNode,
@@ -34,6 +79,7 @@ export class AtomicLab {
   private readonly magneticNumber: HTMLElement;
   private readonly energy: HTMLElement;
   private readonly nodeCount: HTMLElement;
+  private readonly experiments: GuidedExperiments<AtomicExperimentId>;
   private animationFrame = 0;
   private phaseVisible = true;
   private rotating = true;
@@ -56,6 +102,11 @@ export class AtomicLab {
     this.renderer = new AtomicRenderer(this.canvas);
 
     this.populateStates();
+    this.experiments = new GuidedExperiments(
+      requireElement(root, '.atomic-viewport'),
+      ATOMIC_EXPERIMENTS,
+      (id) => this.applyExperiment(id),
+    );
     this.bindControls();
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       this.rotating = false;
@@ -69,6 +120,8 @@ export class AtomicLab {
 
   start(): void {
     this.applyState();
+    this.experiments.activate('probability', false);
+    this.experiments.open();
     this.animationFrame = requestAnimationFrame(this.tick);
   }
 
@@ -97,6 +150,7 @@ export class AtomicLab {
   private bindControls(): void {
     this.stateSelect.addEventListener('change', () => {
       this.stateId = this.stateSelect.value as HydrogenStateId;
+      this.experiments.setFreeMode();
       this.applyState();
     });
 
@@ -117,6 +171,16 @@ export class AtomicLab {
       this.rotationButton.textContent = this.rotating ? 'Rotation on' : 'Rotation off';
       this.renderer.setRotating(this.rotating);
     });
+  }
+
+  private applyExperiment(id: AtomicExperimentId): void {
+    const experiment = ATOMIC_EXPERIMENTS.find((candidate) => candidate.id === id);
+    if (experiment === undefined) {
+      return;
+    }
+    this.stateId = experiment.state;
+    this.stateSelect.value = experiment.state;
+    this.applyState();
   }
 
   private applyState(): void {
