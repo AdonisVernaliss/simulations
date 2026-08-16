@@ -7,32 +7,33 @@ Interactive scientific simulations designed for real-time use in modern browsers
 The application uses stable query-based laboratory addresses that work on static hosting without server-side route rewrites:
 
 - `?lab=catalog` — laboratory catalog;
-- `?lab=orbital` — Orbital Mechanics Lab;
+- `?lab=orbital` — Cosmic Sandbox;
 - `?lab=atomic` — Atomic Orbitals Lab;
 - `?lab=particle` — Particle Track Lab;
 - `?lab=black-hole` — Black Hole Optics Lab;
 - `?lab=quasar` — Quasar Engine Lab.
 
-Opening the root address without a query loads Orbital Mechanics Lab.
+Opening the root address without a query loads Cosmic Sandbox.
 
 Each laboratory opens with guided experiments that load validated initial conditions and explain
 what to change, what to observe, and which relation causes the result. Manual control switches to
 free-experiment mode without changing the underlying physical model. See
 [Laboratory and experiment design](docs/experiment-design.md).
 
-## Orbital Mechanics Lab
+## Cosmic Sandbox
 
 The first simulation models gravitational systems with:
 
-- solar system, binary star, and figure-eight presets;
-- a head-on collision experiment with mass and momentum conservation;
-- configurable mass, position, velocity, radius, and color for new bodies;
+- solar system, binary-star, figure-eight, black-hole encounter, merger, accretion, and disruption presets;
+- black holes, stars, terrestrial worlds, rocky bodies, gas giants, and ice giants in one N-body scene;
+- configurable object type, mass, position, velocity, physical radius, visual radius, and color;
 - orbital trails and optional velocity vectors;
 - direct object selection, a live object inspector, and camera tracking;
-- procedural star fields, stellar glow, dynamic lighting, and planetary rings;
+- NASA/JPL planet maps, procedural photospheres and planetary materials, atmosphere, rings, and adjustable geometry detail;
+- screen-space Schwarzschild thin-lens distortion and an optional Newtonian potential overlay;
 - live energy, momentum, frame rate, and simulation-time diagnostics;
 - pause, reset, time-scale, camera, and rendering-quality controls;
-- perfectly inelastic collision merging;
+- energy- and geometry-dependent accretion, hit-and-run, disruption, capture, and black-hole merger outcomes;
 - automatic quality reduction when the frame budget is exceeded.
 
 ### Interaction
@@ -48,7 +49,7 @@ The first simulation models gravitational systems with:
 
 The simulation uses normalized units with a gravitational constant of `G = 1`. Motion is integrated with a fixed-step velocity Verlet method. A small Plummer-style softening term limits numerical instability when two point masses approach the same position.
 
-Preset positions and velocities are barycentric, so their initial center of mass and total linear momentum are effectively zero. Display radii are intentionally enlarged for readability and are also used as collision boundaries. Collision merging conserves total mass and linear momentum; kinetic energy is not conserved during a merge.
+Preset positions and velocities are barycentric, so their initial center of mass and total linear momentum are effectively zero. Physical radii control collision and capture; independent visual radii keep distant objects readable. Ordinary accretion and resolved disruption conserve total mass and linear momentum; kinetic energy is not conserved during a merge.
 
 The Solar System preset uses JPL-derived mass ratios and orbital scales, but deliberately uses circular, coplanar initial orbits. The model is educational rather than a source of astronomical ephemerides.
 
@@ -79,7 +80,7 @@ See the [Particle track model card](docs/particle-tracks.md) for equations, curr
 
 The black-hole laboratory integrates null geodesics of Schwarzschild spacetime. It exposes the event horizon, photon sphere, critical impact parameter, capture boundary, weak-field limit, and conversion from normalized geometry to physical scale.
 
-Five guided experiments cover capture, near-critical escape, strong and weak lensing, and mass scaling. Stellar orbits, tidal disruption, and mergers are kept as separate future physical modes rather than being imitated with the light-ray model.
+Five guided experiments cover capture, near-critical escape, strong and weak lensing, and mass scaling. Stellar motion and reduced-order merger scenarios remain in Cosmic Sandbox rather than being imitated with the light-ray model; hydrodynamic tidal disruption is still outside the implemented scope.
 
 See the [Black hole optics model card](docs/black-hole-optics.md) for the geodesic equation, exact reference scales, sources, validation, and the distinction between a coordinate diagram and an observed shadow.
 

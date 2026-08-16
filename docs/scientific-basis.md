@@ -4,7 +4,7 @@ This document separates the physical model from its visual presentation and stat
 
 ## Scope
 
-Orbital Mechanics Lab is a deterministic Newtonian point-mass simulation in three spatial dimensions. The included presets are designed to demonstrate orbital mechanics, conservation laws, and sensitivity to initial conditions. They are not ephemerides and do not reproduce the Solar System at a specific date.
+Cosmic Sandbox is a deterministic Newtonian N-body simulation in three spatial dimensions, augmented by bounded collision-outcome and screen-space lensing models. The included presets demonstrate orbital mechanics, conservation laws, close encounters, collision regimes, and compact-object interactions. They are not ephemerides, hydrodynamic simulations, or numerical-relativity calculations.
 
 There is currently no biological model in the project. No claim of biological validity is made.
 
@@ -51,8 +51,9 @@ This preset is intentionally simplified:
 - all bodies begin on one line;
 - all orbits are circular and coplanar;
 - eccentricity, inclination, axial rotation, satellites, relativity, radiation pressure, and non-gravitational forces are omitted;
-- only Mercury through Saturn are included;
-- displayed radii are enlarged and are not on the orbital distance scale.
+- Mercury through Neptune are included;
+- physical collision radii use the same distance scale as the orbits;
+- independent visual radii enlarge bodies so they remain selectable at system scale.
 
 For positions of real planets at a date, JPL Horizons or an integrated ephemeris is required.
 
@@ -64,9 +65,41 @@ Two equal masses start at `x = ±1` with tangential speeds `|v| = 0.5`. With `G 
 
 Three equal masses use the standard Chenciner–Montgomery figure-eight initial conditions. The bodies have zero total momentum and follow the same periodic curve with a phase offset when integrated with sufficient precision.
 
+### Black-hole systems
+
+Black holes participate in the same pairwise N-body force summation as stars and planets. The flyby and black-hole-plus-star presets therefore exchange energy and momentum with every massive body rather than moving along scripted paths. Their far-field orbital motion is Newtonian. Strong-field corrections to massive-particle motion, spin, frame dragging, gravitational-wave backreaction, and relativistic precession are not integrated.
+
+Within each compact-object preset, the supplied black-hole physical radius is a scaled Schwarzschild radius. The presets keep the ratio `r_s / M = 0.02`, corresponding to a normalized speed of light `c = 10` through `r_s = 2GM/c²`. Crossing the combined physical radii triggers capture. The larger visual shadow and disk do not alter force or capture calculations.
+
+The black-hole merger preset estimates radiated mass with
+
+```text
+M_rad / M_total = 0.05 × 4η
+η = m₁m₂ / (m₁ + m₂)²
+```
+
+This is a bounded non-spinning merger estimate, not a waveform or a replacement for numerical relativity. The retained remnant conserves the pre-merger linear momentum; recoil kicks and spin-dependent radiation are omitted.
+
 ## Collisions
 
-Bodies merge when their displayed spheres overlap. The merge is perfectly inelastic:
+Contact is determined only by physical radii. Visual enlargement never changes the collision cross-section. Each ordinary impact is classified from its relative velocity, impact geometry, mutual escape velocity, and center-of-mass specific impact energy
+
+```text
+Q_R = ½ μ v_impact² / M_total
+μ = m₁m₂ / M_total
+```
+
+The gravity-regime catastrophic threshold is approximated as `1.9` times the uniform-sphere binding energy per unit mass. This follows the fluid-planet material parameter and universal-law structure of Leinhardt and Stewart, but does not implement their full composition-, angle-, and mass-ratio-dependent prescription.
+
+The real-time model resolves five outcomes:
+
+- low-energy accretion: a volume-equivalent remnant conserves mass and linear momentum;
+- hit-and-run: a fast grazing contact applies a momentum-conserving normal impulse and separates both bodies;
+- catastrophic disruption: the universal-law largest-remnant fraction is represented by one remnant plus up to eight resolved, gravitating debris bodies;
+- horizon capture: the captured mass and momentum join the black hole;
+- black-hole merger: the retained mass excludes the stated gravitational-radiation estimate.
+
+For ordinary accretion:
 
 - total mass is conserved;
 - linear momentum is conserved;
@@ -74,7 +107,26 @@ Bodies merge when their displayed spheres overlap. The merge is perfectly inelas
 - volume-equivalent radius is computed from `r³ = r₁³ + r₂³`;
 - kinetic energy is not conserved.
 
-Because display radii are enlarged, collision time and collision cross-section are illustrative rather than astronomical.
+Resolved fragments are a reduced-order mass and velocity distribution, not deformable meshes or shock hydrodynamics. Cratering, material strength, phase changes, atmosphere loss, chemistry, and thermal emission are not calculated.
+
+## Gravitational lensing
+
+The shared 3D scene is post-processed around up to two visible black holes. For a background source treated as infinitely distant, the renderer uses the Schwarzschild thin-lens relation
+
+```text
+θ_E² = 2 r_s / D_l
+β = θ - θ_E² / θ
+```
+
+where `D_l` is observer-to-lens distance. The actual scene behind the lens is resampled, so stars, trails, planets, and the accretion disk are visibly deflected. Low and balanced quality process one lens; high quality processes two.
+
+This is physically scaled weak/thin lensing with an explicit horizon mask. It does not depth-sort each source relative to the lens, integrate exact null geodesics per pixel, reproduce higher-order photon rings, or model Kerr lensing. The separate Black Hole Optics laboratory remains the equation-level null-geodesic reference.
+
+## Visual model and detail levels
+
+Earth, Venus, Mars, and Jupiter use credited NASA/JPL observational maps. Stars, generic rocky bodies, Saturn, ice giants, atmospheres, and accretion disks use procedural visual materials. These materials communicate object class but are not time-resolved observations.
+
+Low, balanced, and high detail levels change sphere and ring tessellation, texture anisotropy, background-star count, render pixel ratio, exposure, and the number of simultaneous lenses. Automatic mode reduces those costs when sustained frame time exceeds the budget. The optional field overlay evaluates normalized Newtonian potential contours for the most massive visible bodies; it does not feed back into the force calculation, which always includes every body.
 
 ## Automated validation
 
@@ -84,6 +136,10 @@ The test suite checks:
 - relative energy drift below `10⁻⁶` over repeated binary orbits;
 - conservation of total linear momentum;
 - conservation of mass and momentum during collision merging;
+- classification of accretion, hit-and-run, disruption, capture, and black-hole merger regimes;
+- mass and momentum conservation across resolved disruption fragments;
+- physical separation between collision radius and visual radius;
+- Schwarzschild lens-scale dependence on radius, distance, and field of view;
 - finite state values for every preset;
 - near-zero initial center of mass and total momentum for every preset;
 - deterministic fixed-step accumulation with bounded catch-up work.
@@ -114,4 +170,6 @@ Open publication does not automatically permit copying code or datasets. Equatio
 - A. Chenciner and R. Montgomery, [A remarkable periodic solution of the three-body problem in the case of equal masses](https://arxiv.org/abs/math/0011268), *Annals of Mathematics* 152 (2000), 881–901.
 - W. C. Swope et al., [A computer simulation method for the calculation of equilibrium constants for the formation of physical clusters of molecules](https://doi.org/10.1063/1.442716), *The Journal of Chemical Physics* 76 (1982), 637–649.
 - W. Dehnen, [Towards optimal softening in three-dimensional N-body codes](https://arxiv.org/abs/astro-ph/0011568), *Monthly Notices of the Royal Astronomical Society* 324 (2001), 273–291.
-
+- Z. M. Leinhardt and S. T. Stewart, [Collisions Between Gravity-Dominated Bodies: I. Outcome Regimes and Scaling Laws](https://arxiv.org/abs/1106.6084), *The Astrophysical Journal* 745 (2012), 79.
+- V. Perlick and O. Y. Tsupko, [Calculating black hole shadows: Review of analytical studies](https://arxiv.org/abs/2105.07101), *Physics Reports* 947 (2022), 1–39.
+- Observational texture credits and source files are listed in [Visual asset provenance](visual-assets.md).

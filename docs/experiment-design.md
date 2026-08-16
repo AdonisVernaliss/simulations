@@ -20,12 +20,16 @@ This provides an understandable first action for a new user while retaining a sa
 
 ## Current experiment sets
 
-### Orbital Mechanics
+### Cosmic Sandbox
 
 - planetary periods in an idealized solar system;
+- a black-hole flyby through a planetary system;
+- a star–black-hole binary with circumbinary worlds;
+- a scaled black-hole merger with radiated-mass estimate;
+- catastrophic planetary disruption with resolved remnants;
 - motion around the barycentre of an equal-mass binary;
 - the periodic three-body figure-eight solution;
-- a perfectly inelastic head-on collision.
+- low-energy planetary accretion.
 
 ### Atomic Orbitals
 
@@ -60,13 +64,13 @@ This provides an understandable first action for a new user while retaining a sa
 
 “Black hole interaction” is not one physical model. It must be separated into modes with different equations:
 
-- light interaction uses null geodesics and is implemented now;
-- massive-particle or stellar orbits require timelike geodesics;
+- light interaction uses exact planar null geodesics in Black Hole Optics and a thin-lens screen approximation in Cosmic Sandbox;
+- massive-particle and stellar motion is available as a Newtonian far-field baseline, not as timelike geodesics;
 - tidal disruption requires stellar self-gravity and hydrodynamics;
 - accretion requires disk or plasma dynamics plus radiation, with the current thin-disk laboratory serving only as an analytic baseline;
-- binary-black-hole merger visuals require numerical-relativity waveforms or validated surrogate data.
+- binary-black-hole waveforms require numerical-relativity or validated surrogate data; the sandbox implements only contact, retained momentum, and a bounded radiated-mass estimate.
 
-The interface must not reuse the light-ray integrator to fake a stellar orbit, add an artistic jet to the thin-disk equations, or depict a fluid disruption with unbound decorative particles. Each future mode becomes available only with its own model card and tests.
+The interface does not reuse the light-ray integrator to fake a stellar orbit or add an artistic jet to the thin-disk equations. Resolved collision fragments come from the stated collision-energy model and remain N-body participants; they are not presented as fluid dynamics. Any future hydrodynamic or numerical-relativity mode requires its own model card and tests.
 
 ## Performance rules
 
