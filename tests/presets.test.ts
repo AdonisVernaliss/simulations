@@ -24,4 +24,13 @@ describe('orbital presets', () => {
       expect(Number.isFinite(simulation.getDiagnostics().totalEnergy)).toBe(true);
     }
   });
+
+  it('start in a barycentric reference frame', () => {
+    for (const preset of presets) {
+      const diagnostics = new NBodySimulation(preset.bodies).getDiagnostics();
+
+      expect(Math.hypot(...diagnostics.centerOfMass)).toBeLessThan(1e-9);
+      expect(Math.hypot(...diagnostics.linearMomentum)).toBeLessThan(1e-9);
+    }
+  });
 });

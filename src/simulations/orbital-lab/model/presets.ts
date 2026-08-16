@@ -29,8 +29,8 @@ export const presets = [
         mass: 1,
         radius: 0.28,
         color: '#ffd685',
-        position: [0, 0, 0],
-        velocity: [0, 0, 0],
+        position: [-0.007696572342, 0, 0],
+        velocity: [0, -0.000516924596, 0],
       }),
       body({
         id: 'mercury',
@@ -161,4 +161,3 @@ export type PresetId = (typeof presets)[number]['id'];
 
 export const getPreset = (id: string): SimulationPreset =>
   presets.find((preset) => preset.id === id) ?? presets[0];
-
