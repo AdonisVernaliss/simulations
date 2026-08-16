@@ -260,6 +260,9 @@ export class CelestialMaterialLibrary {
     return new MeshStandardMaterial({
       color: 0xffffff,
       map: texture,
+      emissive: 0xffffff,
+      emissiveMap: texture,
+      emissiveIntensity: 0.055,
       roughness: body.kind === 'gas-giant' || body.kind === 'ice-giant' ? 0.88 : 0.74,
       metalness: 0,
     });

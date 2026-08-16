@@ -152,7 +152,7 @@ export class OrbitalRenderer {
   private readonly materialLibrary: CelestialMaterialLibrary;
   private readonly selectionRing: Mesh<RingGeometry, MeshBasicMaterial>;
   private readonly primaryLight = new PointLight(0xffffff, 34, 0, 1.5);
-  private readonly ambientLight = new AmbientLight(0x7390ad, 0.32);
+  private readonly ambientLight = new AmbientLight(0x8eacc8, 0.52);
   private quality: QualityLevel = 'balanced';
   private bodies: readonly BodyMetadata[] = [];
   private bodyVisuals: CelestialBodyVisual[] = [];
@@ -285,7 +285,7 @@ export class OrbitalRenderer {
 
     const primaryBodyIndex = this.getPrimaryLuminousBodyIndex();
     this.primaryLight.visible = primaryBodyIndex !== undefined;
-    this.ambientLight.intensity = primaryBodyIndex === undefined ? 1.15 : 0.32;
+    this.ambientLight.intensity = primaryBodyIndex === undefined ? 1.08 : 0.52;
     if (primaryBodyIndex !== undefined) {
       this.primaryLight.position.fromArray(positions, primaryBodyIndex * 3);
       this.primaryLight.color.set(this.bodies[primaryBodyIndex]?.color ?? 0xffffff);

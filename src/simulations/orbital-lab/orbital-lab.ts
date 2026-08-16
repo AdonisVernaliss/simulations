@@ -129,6 +129,7 @@ export class OrbitalLab {
   private readonly momentumElement: HTMLElement;
   private readonly qualityActiveElement: HTMLElement;
   private readonly collisionNotice: HTMLElement;
+  private readonly closeCollisionButton: HTMLButtonElement;
   private readonly collisionTitle: HTMLElement;
   private readonly collisionDetail: HTMLElement;
   private readonly bodyListElement: HTMLElement;
@@ -189,6 +190,7 @@ export class OrbitalLab {
     this.momentumElement = requireElement(root, '[data-momentum]');
     this.qualityActiveElement = requireElement(root, '[data-quality-active]');
     this.collisionNotice = requireElement(root, '[data-collision-notice]');
+    this.closeCollisionButton = requireElement(root, '[data-close-collision]');
     this.collisionTitle = requireElement(root, '[data-collision-title]');
     this.collisionDetail = requireElement(root, '[data-collision-detail]');
     this.bodyListElement = requireElement(root, '[data-body-list]');
@@ -265,8 +267,6 @@ export class OrbitalLab {
     this.bodies = details.bodies;
     this.selectedBodyIndex = undefined;
     this.initialEnergy = frame.diagnostics.totalEnergy;
-    this.lastCollisionSequence = 0;
-    this.collisionNotice.dataset.open = 'false';
     this.renderer.setBodies(
       details.bodies,
       frame.positions,
@@ -356,6 +356,7 @@ export class OrbitalLab {
       this.activePresetId = this.presetSelect.value;
       this.experiments.activate(this.activePresetId as OrbitalExperimentId, false);
       this.setStatus('Loading model', 'loading');
+      this.resetCollisionNotice();
       this.worker.initialize(this.activePresetId);
     });
 
@@ -363,7 +364,13 @@ export class OrbitalLab {
 
     this.resetButton.addEventListener('click', () => {
       this.setStatus('Resetting model', 'loading');
+      this.resetCollisionNotice();
       this.worker.initialize(this.activePresetId);
+    });
+
+    this.closeCollisionButton.addEventListener('click', () => {
+      window.clearTimeout(this.collisionNoticeTimeout);
+      this.collisionNotice.dataset.open = 'false';
     });
 
     this.addBodyButton.addEventListener('click', () => {
@@ -507,7 +514,14 @@ export class OrbitalLab {
     this.activePresetId = id;
     this.presetSelect.value = id;
     this.setStatus('Loading experiment', 'loading');
+    this.resetCollisionNotice();
     this.worker.initialize(id);
+  }
+
+  private resetCollisionNotice(): void {
+    window.clearTimeout(this.collisionNoticeTimeout);
+    this.lastCollisionSequence = 0;
+    this.collisionNotice.dataset.open = 'false';
   }
 
   private togglePaused(): void {
@@ -578,6 +592,7 @@ export class OrbitalLab {
     this.inspectorElement.setAttribute('aria-hidden', String(!isOpen));
 
     if (selection !== undefined) {
+      this.collisionNotice.dataset.open = 'false';
       this.selectedNameElement.textContent = selection.body.name;
       this.selectedTypeElement.textContent = selection.body.kind.replaceAll('-', ' ');
       this.selectedMassElement.textContent = selection.body.mass.toExponential(4);
@@ -727,6 +742,7 @@ export class OrbitalLab {
               <strong data-collision-title>Collision</strong>
               <p data-collision-detail></p>
             </div>
+            <button class="collision-close" type="button" data-close-collision aria-label="Dismiss physical event">×</button>
           </aside>
 
           <aside class="object-inspector" data-inspector data-open="false" aria-hidden="true">

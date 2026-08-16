@@ -414,7 +414,7 @@ canvas {
   right: clamp(18px, 3vw, 44px);
   display: grid;
   width: min(330px, calc(100vw - 32px));
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 12px;
   padding: 15px 16px;
   border: 1px solid rgba(255, 178, 96, 0.25);
@@ -430,7 +430,30 @@ canvas {
 
 .collision-notice[data-open="true"] {
   opacity: 1;
+  pointer-events: auto;
   transform: translateX(0);
+}
+
+.collision-close {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 189, 123, 0.16);
+  border-radius: 50%;
+  color: #c7a98d;
+  background: rgba(255, 176, 94, 0.06);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1rem;
+}
+
+.collision-close:hover,
+.collision-close:focus-visible {
+  border-color: rgba(255, 189, 123, 0.38);
+  color: #fff1df;
+  outline: none;
 }
 
 .collision-icon {
