@@ -15,11 +15,17 @@ The application uses stable query-based laboratory addresses that work on static
 
 Opening the root address without a query loads Orbital Mechanics Lab.
 
+Each laboratory opens with guided experiments that load validated initial conditions and explain
+what to change, what to observe, and which relation causes the result. Manual control switches to
+free-experiment mode without changing the underlying physical model. See
+[Laboratory and experiment design](docs/experiment-design.md).
+
 ## Orbital Mechanics Lab
 
 The first simulation models gravitational systems with:
 
 - solar system, binary star, and figure-eight presets;
+- a head-on collision experiment with mass and momentum conservation;
 - configurable mass, position, velocity, radius, and color for new bodies;
 - orbital trails and optional velocity vectors;
 - direct object selection, a live object inspector, and camera tracking;
@@ -57,6 +63,7 @@ The second simulation models selected stationary states of the non-relativistic 
 - phase-sign colors, radial scale guides, quantum numbers, nodes, and model energy;
 - deterministic sampling and selectable point density;
 - orbit, zoom, rotation, and mobile-adaptive controls.
+- guided comparisons of probability, ground-state symmetry, radial nodes, and angular nodes.
 
 See the [Atomic orbitals model card](docs/atomic-orbitals.md) for equations, constants, sampling details, sources, validation, and limitations.
 
@@ -64,17 +71,23 @@ See the [Atomic orbitals model card](docs/atomic-orbitals.md) for equations, con
 
 The particle laboratory integrates ideal relativistic tracks in a uniform magnetic field. Charge sign sets curvature direction, while evaluated rest mass, kinetic energy, and magnetic-field strength set momentum and radius. Muon and charged-pion tracks also show vacuum survival probability from their mean lifetimes.
 
+Five guided experiments cover track reading, charge-sign reversal, high momentum, and pion survival.
+
 See the [Particle track model card](docs/particle-tracks.md) for equations, current Particle Data Group sources, validation, and omitted detector physics.
 
 ## Black Hole Optics Lab
 
 The black-hole laboratory integrates null geodesics of Schwarzschild spacetime. It exposes the event horizon, photon sphere, critical impact parameter, capture boundary, weak-field limit, and conversion from normalized geometry to physical scale.
 
+Five guided experiments cover capture, near-critical escape, strong and weak lensing, and mass scaling. Stellar orbits, tidal disruption, and mergers are kept as separate future physical modes rather than being imitated with the light-ray model.
+
 See the [Black hole optics model card](docs/black-hole-optics.md) for the geodesic equation, exact reference scales, sources, validation, and the distinction between a coordinate diagram and an observed shadow.
 
 ## Quasar Engine Lab
 
 The quasar laboratory computes a steady zero-torque thin-disk baseline: Eddington luminosity, accretion rate, radial dissipation, effective temperature, and the local Wien peak. The false-colour disk is explicitly separated from relativistic transfer, plasma, corona, jet, and GRMHD models.
+
+The disk now has a lightweight live orbital-flow overlay and four guided mass/accretion experiments.
 
 See the [Quasar thin-disk model card](docs/thin-disk.md) for equations, assumptions, sources, validation, and the regimes where the approximation fails.
 

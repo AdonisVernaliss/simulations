@@ -40,7 +40,7 @@ The displayed local peak wavelength is Wien's displacement value `λ_max = b/T_m
 
 Colour is a false-colour encoding of calculated effective temperature. It is not a prediction of visible RGB appearance. To keep the hot inner disk legible on small screens, rendered radius is proportional to `sqrt(r)` and the displayed profile ends at `140r_g`; physical values are still evaluated at their labelled radii.
 
-The renderer is event-driven and uses Canvas 2D. It redraws only after a resize or parameter change, avoiding a permanent animation loop.
+The renderer uses Canvas 2D. Its expensive temperature field is cached and redrawn only after a resize or parameter change. A lightweight overlay animates a bounded set of orbital tracers at 30 frames per second. Their relative angular rates follow the Keplerian relation `Ω ∝ r⁻³⁄²`; display time is deliberately compressed independently of black-hole mass, while the interface reports the calculated physical orbital period at the hottest annulus.
 
 ## Validation
 

@@ -1,0 +1,84 @@
+# Laboratory and experiment design
+
+## User model
+
+The project uses four layers:
+
+```text
+Catalog → Laboratory → Guided experiment → Free experiment
+```
+
+A laboratory owns one scientific domain and its validated model code. Guided experiments load known initial conditions into that model; they are not separate decorative pages. Free experiment mode exposes the same controls without claiming that every arbitrary setting represents a real system.
+
+Every guided experiment answers three questions:
+
+1. What should the user change or compare?
+2. Which measured output should they watch?
+3. Which equation explains the result?
+
+This provides an understandable first action for a new user while retaining a sandbox for independent exploration. The pattern follows the useful separation seen in Universe Sandbox between included simulations and editable object properties, combined with the selected-object information and navigation emphasis of SpaceEngine.
+
+## Current experiment sets
+
+### Orbital Mechanics
+
+- planetary periods in an idealized solar system;
+- motion around the barycentre of an equal-mass binary;
+- the periodic three-body figure-eight solution;
+- a perfectly inelastic head-on collision.
+
+### Atomic Orbitals
+
+- interpreting a probability cloud rather than a classical orbit;
+- the spherical, node-free `1s` ground state;
+- the radial node of `2s`;
+- the angular nodes of `3d z²`.
+
+### Particle Tracks
+
+- inferring momentum from curvature;
+- comparing electron and positron bend directions;
+- the high-momentum, large-radius limit;
+- charged-pion survival and decay length.
+
+### Black Hole Optics
+
+- strong lensing with escape;
+- capture below the critical impact parameter;
+- near-critical motion around the photon sphere;
+- the weak-field deflection limit;
+- scale invariance when black-hole mass changes.
+
+### Quasar Engine
+
+- a reference luminous thin disk;
+- the hotter disk of a lower-mass black hole;
+- the cooler disk of a very massive black hole;
+- approach to the Eddington boundary.
+
+## Black-hole interaction boundaries
+
+“Black hole interaction” is not one physical model. It must be separated into modes with different equations:
+
+- light interaction uses null geodesics and is implemented now;
+- massive-particle or stellar orbits require timelike geodesics;
+- tidal disruption requires stellar self-gravity and hydrodynamics;
+- accretion requires disk or plasma dynamics plus radiation, with the current thin-disk laboratory serving only as an analytic baseline;
+- binary-black-hole merger visuals require numerical-relativity waveforms or validated surrogate data.
+
+The interface must not reuse the light-ray integrator to fake a stellar orbit, add an artistic jet to the thin-disk equations, or depict a fluid disruption with unbound decorative particles. Each future mode becomes available only with its own model card and tests.
+
+## Performance rules
+
+- Initial conditions are data; shared physics and rendering code are reused.
+- Canvas laboratories redraw expensive static layers only after input or resize.
+- Animation overlays use bounded point counts and stop affecting the physical calculation.
+- WebGL assets remain procedural and quality-adaptive.
+- Hidden documents do not advance expensive simulations.
+- New experiments add no network request and no dependency by default.
+
+## Interface references
+
+- [Universe Sandbox](https://www.universesandbox.com/), official feature overview: included physical simulations, editable properties, time control, collisions, and system creation.
+- [Universe Sandbox in the Classroom](https://www.universesandbox.com/education/), official description of hypothesis-driven experimentation through editable properties.
+- [SpaceEngine user manual](https://spaceengine.org/manual/user-manual-0980/), official description of selection, object information, camera binding, navigation, and persistent HUD data.
