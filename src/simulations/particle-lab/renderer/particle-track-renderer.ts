@@ -66,6 +66,7 @@ export class ParticleTrackRenderer {
     this.drawDetector(centerX, centerY, pixelsPerMetre);
 
     if (this.track !== undefined) {
+      this.drawCurvatureConstruction(this.track, centerX, centerY, pixelsPerMetre);
       this.drawTrack(this.track, centerX, centerY, pixelsPerMetre);
     }
   }
@@ -118,13 +119,103 @@ export class ParticleTrackRenderer {
     this.context.lineTo(centerX, centerY + DETECTOR_RADIUS_METRES * scale);
     this.context.stroke();
 
-    this.context.fillStyle = '#f4dba0';
-    this.context.shadowColor = '#ffc65f';
-    this.context.shadowBlur = 14;
+    this.context.fillStyle = 'rgba(158, 221, 250, 0.78)';
+    this.context.shadowColor = '#74d8ff';
+    this.context.shadowBlur = 10;
     this.context.beginPath();
-    this.context.arc(centerX, centerY, 4, 0, Math.PI * 2);
+    this.context.arc(centerX, centerY, 3, 0, Math.PI * 2);
     this.context.fill();
+    this.context.shadowBlur = 0;
+    this.context.fillStyle = 'rgba(151, 188, 210, 0.66)';
+    this.context.font = '10px Inter, sans-serif';
+    this.context.fillText('interaction point · track starts here', centerX + 9, centerY - 9);
+    this.context.fillStyle = 'rgba(101, 142, 165, 0.48)';
+    this.context.fillText('concentric circles = detector layers, not particle orbits', centerX - 190, centerY + DETECTOR_RADIUS_METRES * scale + 18);
     this.context.restore();
+  }
+
+  private drawCurvatureConstruction(
+    track: ParticleTrack,
+    centerX: number,
+    centerY: number,
+    scale: number,
+  ): void {
+    const radius = track.kinematics.radius;
+    if (!Number.isFinite(radius) || radius <= 0) {
+      return;
+    }
+
+    const bendDirection = track.particle.charge * (track.magneticField < 0 ? -1 : 1);
+    const curvatureCenterY = centerY - bendDirection * radius * scale;
+    const radiusPixels = radius * scale;
+    const forceDirection = -bendDirection;
+    const forceLength = 48;
+
+    this.context.save();
+    this.context.setLineDash([4, 6]);
+    this.context.strokeStyle = 'rgba(125, 198, 228, 0.2)';
+    this.context.lineWidth = 1;
+    this.context.beginPath();
+    this.context.arc(centerX, curvatureCenterY, radiusPixels, 0, Math.PI * 2);
+    this.context.stroke();
+    this.context.beginPath();
+    this.context.moveTo(centerX, curvatureCenterY);
+    this.context.lineTo(centerX, centerY);
+    this.context.stroke();
+    this.context.setLineDash([]);
+
+    this.context.strokeStyle = 'rgba(129, 211, 245, 0.72)';
+    this.context.beginPath();
+    this.context.moveTo(centerX - 5, curvatureCenterY);
+    this.context.lineTo(centerX + 5, curvatureCenterY);
+    this.context.moveTo(centerX, curvatureCenterY - 5);
+    this.context.lineTo(centerX, curvatureCenterY + 5);
+    this.context.stroke();
+    this.context.fillStyle = 'rgba(148, 196, 219, 0.7)';
+    this.context.font = '10px Inter, sans-serif';
+    this.context.fillText('geometric curvature centre · no object here', centerX + 9, curvatureCenterY - 8);
+    this.context.fillText('R', centerX + 7, (curvatureCenterY + centerY) / 2);
+
+    this.drawArrow(centerX, centerY, centerX + 54, centerY, 'rgba(143, 231, 255, 0.78)');
+    this.context.fillStyle = 'rgba(143, 231, 255, 0.72)';
+    this.context.fillText('velocity v', centerX + 61, centerY + 4);
+    this.drawArrow(
+      centerX,
+      centerY,
+      centerX,
+      centerY + forceDirection * forceLength,
+      'rgba(255, 183, 112, 0.82)',
+    );
+    this.context.fillStyle = 'rgba(255, 190, 125, 0.78)';
+    this.context.fillText(
+      'Lorentz force q(v × B)',
+      centerX + 9,
+      centerY + forceDirection * forceLength + (forceDirection < 0 ? -5 : 12),
+    );
+    this.context.restore();
+  }
+
+  private drawArrow(
+    startX: number,
+    startY: number,
+    endX: number,
+    endY: number,
+    color: string,
+  ): void {
+    const angle = Math.atan2(endY - startY, endX - startX);
+    this.context.strokeStyle = color;
+    this.context.fillStyle = color;
+    this.context.lineWidth = 1.4;
+    this.context.beginPath();
+    this.context.moveTo(startX, startY);
+    this.context.lineTo(endX, endY);
+    this.context.stroke();
+    this.context.beginPath();
+    this.context.moveTo(endX, endY);
+    this.context.lineTo(endX - 8 * Math.cos(angle - 0.42), endY - 8 * Math.sin(angle - 0.42));
+    this.context.lineTo(endX - 8 * Math.cos(angle + 0.42), endY - 8 * Math.sin(angle + 0.42));
+    this.context.closePath();
+    this.context.fill();
   }
 
   private drawTrack(

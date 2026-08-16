@@ -259,12 +259,18 @@ export class ParticleLab {
             </div>
             <p data-particle-description>Muon in an ideal uniform magnetic field and vacuum.</p>
             <p class="particle-model-note">
-              Curvature follows p = 0.299792458 |z|BR. Matter effects and detector noise are off.
+              This is a transverse detector view, not an orbit around a central body. The particle
+              starts at the interaction point; q(v × B) continuously turns its velocity. Curvature
+              follows p = 0.299792458 |z|BR. Matter effects and detector noise are off.
             </p>
           </div>
 
           <aside class="track-panel" aria-label="Relativistic track properties">
             <p class="particle-eyebrow">Computed state</p>
+            <p class="track-context">
+              Dashed circle and cross show the geometric centre used to measure R. There is no
+              mass or force source at that cross; the solenoid field fills the detector.
+            </p>
             <dl>
               <div><dt>Rest mass</dt><dd data-particle-mass>—</dd></div>
               <div><dt>Charge</dt><dd data-particle-charge>—</dd></div>
