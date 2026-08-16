@@ -122,8 +122,8 @@ export const getRelativisticKinematics = (
   if (!Number.isFinite(kineticEnergyGeV) || kineticEnergyGeV < 0) {
     throw new RangeError('Kinetic energy must be finite and non-negative.');
   }
-  if (!Number.isFinite(magneticFieldTesla) || magneticFieldTesla < 0) {
-    throw new RangeError('Magnetic field must be finite and non-negative.');
+  if (!Number.isFinite(magneticFieldTesla)) {
+    throw new RangeError('Magnetic field must be finite.');
   }
 
   const totalEnergy = particle.massGeV + kineticEnergyGeV;
@@ -136,7 +136,7 @@ export const getRelativisticKinematics = (
     magneticFieldTesla === 0 || momentum === 0
       ? Number.POSITIVE_INFINITY
       : momentum /
-        (MAGNETIC_CURVATURE_FACTOR * Math.abs(particle.charge) * magneticFieldTesla);
+        (MAGNETIC_CURVATURE_FACTOR * Math.abs(particle.charge * magneticFieldTesla));
   const meanDecayLength =
     particle.meanLifetimeSeconds === undefined
       ? Number.POSITIVE_INFINITY
@@ -172,7 +172,7 @@ export const createTrack = (
     kineticEnergyGeV,
     magneticFieldTesla,
   );
-  const direction = particle.charge;
+  const direction = particle.charge * (magneticFieldTesla < 0 ? -1 : 1);
   const points: TrackPoint[] = [];
 
   for (let index = 0; index < pointCount; index += 1) {
