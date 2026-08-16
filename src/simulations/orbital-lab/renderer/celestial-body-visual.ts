@@ -249,8 +249,12 @@ export class CelestialMaterialLibrary {
 
     let texture = this.textures.get(body.surface);
     if (texture === undefined) {
-      texture = createProceduralTexture(body);
-      this.textures.set(`procedural:${body.id}`, texture);
+      const proceduralKey = `procedural:${body.kind}:${body.surface}:${body.color}`;
+      texture = this.textures.get(proceduralKey);
+      if (texture === undefined) {
+        texture = createProceduralTexture(body);
+        this.textures.set(proceduralKey, texture);
+      }
     }
 
     return new MeshStandardMaterial({
