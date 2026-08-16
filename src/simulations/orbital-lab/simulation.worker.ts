@@ -4,6 +4,7 @@ import { FixedStepClock } from '../../core/fixed-step';
 import { NBodySimulation } from './model/n-body';
 import { getPreset, type SimulationPreset } from './model/presets';
 import { physicalWarpToModelRate } from './model/time-scale';
+import type { SimulationDiagnostics } from './model/types';
 import type {
   AdvanceRequest,
   BodyMetadata,
@@ -19,6 +20,8 @@ let simulation: NBodySimulation | undefined;
 let clock: FixedStepClock | undefined;
 let paused = false;
 let timeWarp = 1;
+let diagnostics: SimulationDiagnostics | undefined;
+let diagnosticsElapsedSeconds = 0;
 
 const createPositionBuffer = (
   source: Float64Array,
@@ -62,6 +65,8 @@ const postInitialized = (recycledBuffer?: ArrayBuffer): void => {
   }
 
   const positions = createPositionBuffer(simulation.positions, recycledBuffer);
+  diagnostics = simulation.getDiagnostics();
+  diagnosticsElapsedSeconds = 0;
 
   postWithPositions(
     {
@@ -73,7 +78,7 @@ const postInitialized = (recycledBuffer?: ArrayBuffer): void => {
       bodies: getBodyMetadata(simulation),
       time: simulation.time,
       positions,
-      diagnostics: simulation.getDiagnostics(),
+      diagnostics,
       collision: simulation.lastCollisionEvent,
     },
     positions,
@@ -128,6 +133,11 @@ const advance = (request: AdvanceRequest): void => {
   }
 
   const positions = createPositionBuffer(simulation.positions, request.positionBuffer);
+  diagnosticsElapsedSeconds += elapsedSeconds;
+  if (diagnostics === undefined || diagnosticsElapsedSeconds >= 0.2) {
+    diagnostics = simulation.getDiagnostics();
+    diagnosticsElapsedSeconds = 0;
+  }
 
   postWithPositions(
     {
@@ -135,7 +145,7 @@ const advance = (request: AdvanceRequest): void => {
       session: activeSession,
       time: simulation.time,
       positions,
-      diagnostics: simulation.getDiagnostics(),
+      diagnostics,
       droppedTime: result.droppedTime,
       collision: simulation.lastCollisionEvent,
     },
