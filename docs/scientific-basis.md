@@ -4,7 +4,7 @@ This document separates the physical model from its visual presentation and stat
 
 ## Scope
 
-Cosmic Sandbox is a deterministic Newtonian N-body simulation in three spatial dimensions, augmented by bounded collision-outcome, leading-order tidal, and screen-space lensing models. The included presets demonstrate orbital mechanics, conservation laws, close encounters, collision regimes, and compact-object interactions. They are not ephemerides, hydrodynamic simulations, or numerical-relativity calculations.
+Cosmic Sandbox is a deterministic Newtonian N-body simulation in three spatial dimensions, augmented by bounded collision-outcome and leading-order tidal models. Schwarzschild null geodesics provide a separate optical transfer model around visible non-rotating black holes. The included presets demonstrate orbital mechanics, conservation laws, close encounters, collision regimes, and compact-object interactions. They are not ephemerides, hydrodynamic simulations, or numerical-relativity calculations.
 
 There is currently no biological model in the project. No claim of biological validity is made.
 
@@ -103,9 +103,9 @@ M_rad / M_total = 0.05 × 4η
 
 This is a bounded non-spinning merger estimate, not a waveform or a replacement for numerical relativity. The retained remnant conserves the pre-merger linear momentum; recoil kicks and spin-dependent radiation are omitted.
 
-### Active nuclei, neutron stars, and pulsars
+### Accreting black holes, active nuclei, neutron stars, and pulsars
 
-The active-nucleus preset places a radio-loud quasar engine in the same N-body state as its nearby star and giant planet. Gravity comes only from the listed masses. The accretion disk and bipolar jet are emission overlays: they neither add mass nor exert a jet force. The detailed Quasar Engine laboratory separately evaluates the zero-torque thin-disk temperature model.
+The compact-object renderer has three explicit states: a naked black hole with no local emitter, an accreting black hole with a thin disk, and an active nucleus with the same disk plus qualitative bipolar jets. The accreting and active-nucleus presets place these objects in the same N-body state as their nearby stars and planets. Gravity comes only from the listed masses. Disk emission and jets neither add mass nor exert a force. The detailed Quasar Engine laboratory separately evaluates the zero-torque thin-disk temperature model.
 
 Neutron stars and pulsars are ordinary massive N-body participants with deliberately enlarged render radii and compact physical radii. The pulsar's 1.337-second spin is converted into the model time unit. Its two cones are an idealized magnetic-axis lighthouse pattern, following the rotating-neutron-star interpretation of pulsations; they are not a radio-emission or plasma-magnetosphere calculation. The double-neutron-star preset is Newtonian and omits gravitational-wave inspiral, tidal deformation, and merger physics.
 
@@ -134,7 +134,7 @@ The real-time model distinguishes five outcomes:
 
 - low-energy accretion: a volume-equivalent remnant conserves mass and linear momentum;
 - hit-and-run: a fast grazing contact applies a momentum-conserving normal impulse and separates both bodies;
-- catastrophic-disruption threshold: both resolved bodies receive a separating impulse, but no debris is invented without a hydrodynamic solver;
+- catastrophic-disruption threshold: both resolved bodies receive a separating impulse, but no massive debris bodies are invented without a hydrodynamic solver;
 - horizon capture: the captured mass and momentum join the black hole;
 - black-hole merger: the retained mass excludes the stated gravitational-radiation estimate.
 
@@ -146,28 +146,30 @@ For ordinary accretion:
 - volume-equivalent radius is computed from `r³ = r₁³ + r₂³`;
 - kinetic energy is not conserved.
 
-For two equal-density, equal-radius worlds this gives twice the mass and `∛2 ≈ 1.26` times the radius. The animated molten material marks a qualitative hot post-impact state; it does not claim a calculated temperature or cooling curve. Cratering, material strength, phase changes, atmosphere loss, chemistry, ejecta, and thermal evolution are not calculated. A credible disruptive impact needs a fluid method such as SPH, PBF, or FLIP rather than a few rigid spheres.
+For two equal-density, equal-radius worlds this gives twice the mass and `∛2 ≈ 1.26` times the radius. The animated molten material marks a qualitative hot post-impact state; it does not claim a calculated temperature or cooling curve.
 
-## Gravitational lensing
+Ordinary impacts also trigger one bounded GPU tracer cloud. Its centre and impact-plane orientation come from the collision state. The stored characteristic ejecta speed is `0.5 v_impact`, following the central tendency reported for escaping debris in the cited giant-impact database; the renderer uses its ratio to mutual escape speed to set a capped visual expansion. Tracers have no mass and do not feed back into gravity. Their real-time lifetime, colours, particle count, and individual paths are illustrative. Cratering, material strength, phase changes, atmosphere loss, chemistry, fragment-size distribution, reaccretion, and thermal evolution are not calculated. A credible disruptive impact needs a fluid method such as SPH rather than a few rigid spheres.
 
-The shared 3D scene is post-processed around up to two visible black holes. For a background source treated as infinitely distant, the renderer uses the Schwarzschild thin-lens relation
+## Schwarzschild optical transfer
 
-```text
-θ_E² = 2 r_s / D_l
-β = θ - θ_E² / θ
-```
+Each visible black hole carries a camera-facing, bounded beam-tracing surface. The implementation adapts Eric Bruneton's BSD-licensed constant-time Schwarzschild parameterization: two precomputed floating-point tables return null-ray deflection and disk-crossing radius instead of iterating a geodesic many times per pixel. Manual bilinear lookup keeps the result available on WebGL devices without float-linear filtering. Low, balanced, and high modes vary disk-noise detail and render resolution, not the underlying lookup dimensions.
 
-where `D_l` is observer-to-lens distance. The actual scene behind the lens is resampled, so background stars, trails, and planets are visibly deflected. Low and balanced quality process one lens; high quality processes two.
+All radii in the optical shader are measured in Schwarzschild radii `r_s`. It distinguishes:
 
-This is physically scaled weak/thin lensing with an explicit shadow mask. Black-hole emission is composited after that pass so the screen-space approximation does not incorrectly lens its own disk into giant duplicate Einstein rings. Background stars, trails, planets, and other bodies remain distorted.
+- event horizon: `r = r_s`;
+- unstable circular photon orbit: `r = 1.5 r_s`;
+- critical impact parameter and apparent shadow radius for a distant static observer: `b_c = 3√3/2 r_s ≈ 2.598 r_s`;
+- Schwarzschild innermost stable circular orbit: `r = 3 r_s`.
 
-The compact-object overlay is informed by the image anatomy demonstrated by the DNGR renderer for *Interstellar*: a black observable shadow, a thin photon-ring cue, a three-dimensional temperature-graded accretion disk with line-of-sight beaming asymmetry, and secondary disk-arc cues above and below the shadow. Disk inclination now changes with the camera and turbulent filaments move continuously. It is not DNGR itself. It does not integrate Kerr ray bundles, radiative transfer, polarization, higher-order images, or a physical disk spectrum. The event horizon is inside the observable shadow and is not presented as a directly visible surface. The separate Black Hole Optics laboratory remains the equation-level Schwarzschild null-geodesic reference.
+Escaping rays sample the Gaia EDR3 equirectangular all-sky colour map. Captured rays terminate in the shadow. A razor-thin disk from `3 r_s` to `12 r_s` can intersect a ray twice, which produces camera-dependent direct and secondary images of its front and rear faces above and below the shadow. Disk brightness includes a zero-torque radial temperature profile, approximate colour mapping, orbital time delay, relativistic frequency shift, and a bounded `g³` intensity factor. Procedural density filaments keep the idealized disk from appearing as a static image.
+
+The previous whole-screen thin-lens pass was removed because it distorted the already beam-traced image a second time and made a large unphysical ripple. The bounded transfer surface currently lenses the Gaia sky and its own disk, not trails or nearby 3D bodies. The model is Schwarzschild: it assumes a static non-rotating hole and static observer. It does not implement Kerr frame dragging, a moving-observer tetrad, full spectral radiative transfer, polarization, disk thickness, self-shadowing, coronae, magnetohydrodynamics, or GRMHD jets. The event horizon is not drawn as a surface; the visible dark region is the larger optical shadow. The separate Black Hole Optics laboratory remains the equation-level ray reference.
 
 ## Visual model and detail levels
 
-Earth, Venus, Mars, and Jupiter use credited NASA/JPL observational maps. Stars, generic rocky bodies, Saturn, ice giants, atmospheres, and accretion disks use procedural visual materials. These materials communicate object class but are not time-resolved observations. The distant background system and galactic star band are non-interacting visual context and are not members of the active N-body state.
+Earth, Venus, Mars, and Jupiter use credited NASA/JPL observational maps. The background is a three-resolution equirectangular map of Gaia EDR3 source colour and density from ESA/Gaia/DPAC. Stars, generic rocky bodies, Saturn, ice giants, atmospheres, disks, jets, and collision tracers use procedural visual materials. These materials communicate object class but are not time-resolved observations. The sky is non-interacting visual context and is not a member of the active N-body state.
 
-Low, balanced, and high detail levels change sphere and ring tessellation, texture anisotropy, background-star count, render pixel ratio, exposure, and the number of simultaneous lenses. Automatic mode reduces those costs when sustained frame time exceeds the budget. The optional field overlay evaluates normalized Newtonian potential contours for the most massive visible bodies; it does not feed back into the force calculation, which always includes every body.
+Low, balanced, and high detail levels change sphere and ring tessellation, texture anisotropy, sky-map resolution, disk density detail, collision-tracer count, render pixel ratio, and exposure. Automatic mode reduces those costs when sustained frame time exceeds the budget. The optional field overlay evaluates normalized Newtonian potential contours for the most massive visible bodies; it does not feed back into the force calculation, which always includes every body.
 
 ## Automated validation
 
@@ -183,7 +185,7 @@ The test suite checks:
 - classification of accretion, hit-and-run, disruption, capture, and black-hole merger regimes;
 - inverse-cube scaling of the tidal-stress indicator;
 - physical separation between collision radius and visual radius;
-- Schwarzschild lens-scale dependence on radius, distance, and field of view;
+- decoding and dimension validation for both Schwarzschild beam lookup tables;
 - finite state values for every preset;
 - near-zero initial center of mass and total momentum for every preset;
 - deterministic fixed-step accumulation with bounded catch-up work.
@@ -219,6 +221,10 @@ Open publication does not automatically permit copying code or datasets. Equatio
 - M. Ishii, M. Shibata, and Y. Mino, [Black hole tidal problem in the Fermi normal coordinates](https://arxiv.org/abs/gr-qc/0501084), *Physical Review D* 71 (2005), 044017.
 - M. Kesden, [Tidal disruption rate of stars by spinning supermassive black holes](https://arxiv.org/abs/1109.6329), *Physical Review D* 85 (2012), 024037.
 - V. Perlick and O. Y. Tsupko, [Calculating black hole shadows: Review of analytical studies](https://arxiv.org/abs/2105.07101), *Physics Reports* 947 (2022), 1–39.
+- E. Bruneton, [Real-time High-Quality Rendering of Non-Rotating Black Holes](https://arxiv.org/abs/2010.08735) (2020), and the [BSD-licensed reference implementation](https://github.com/ebruneton/black_hole_shader); Schwarzschild deflection and disk-intersection lookup parameterization.
 - O. James, E. von Tunzelmann, P. Franklin, and K. S. Thorne, [Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar](https://arxiv.org/abs/1502.03808), *Classical and Quantum Gravity* 32 (2015), 065001; DNGR image anatomy and Kerr ray-bundle rendering used as the visual reference, not as the sandbox numerical method.
+- ESA/Gaia/DPAC, [The colour of the sky from Gaia's Early Data Release 3](https://www.esa.int/ESA_Multimedia/Images/2020/12/The_colour_of_the_sky_from_Gaia_s_Early_Data_Release_32); equirectangular source-density and colour context, CC BY-SA 3.0 IGO.
+- USGS, [A new database of giant impacts over a wide range of masses and material strength](https://www.usgs.gov/publications/a-new-database-giant-impacts-over-a-wide-range-masses-and-material-strength-a-first) (2024); characteristic escaping-debris speed used only to scale the massless tracer cloud.
+- USGS, [Two planets undergoing a hit-and-run impact](https://www.usgs.gov/media/videos/two-planets-undergoing-a-hit-and-run-impact); public-domain SPLATCH/SPH visualization used as a qualitative impact-geometry reference.
 - T. Gold, [Rotating Neutron Stars as the Origin of the Pulsating Radio Sources](https://doi.org/10.1038/218731a0), *Nature* 218 (1968), 731–732; rotating-neutron-star lighthouse interpretation used for the schematic pulsar overlay.
 - Observational texture credits and source files are listed in [Visual asset provenance](visual-assets.md).
