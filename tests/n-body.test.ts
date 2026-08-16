@@ -135,6 +135,31 @@ describe('NBodySimulation', () => {
     expect(simulation.radii[0]).toBeCloseTo(Math.cbrt(0.2 ** 3 * 2), 12);
   });
 
+  it('uses the exact sweep broad phase for larger collision sets', () => {
+    const bodies: BodyDefinition[] = Array.from({ length: 60 }, (_, index) => ({
+      id: `collision-set-${index}`,
+      name: `Collision set ${index}`,
+      mass: 1,
+      radius: 0.1,
+      color: '#ffffff',
+      position: [index === 1 ? 0.1 : index * 10, 0, 0],
+      velocity: [0, 0, 0],
+    }));
+    const simulation = new NBodySimulation(bodies, {
+      collisions: true,
+      gravitationalConstant: 0,
+    });
+
+    simulation.step(0.001);
+
+    expect(simulation.collisionAlgorithm).toBe('sweep-and-prune');
+    expect(simulation.count).toBe(59);
+    expect(simulation.lastCollisionEvent?.participants).toEqual([
+      'collision-set-0',
+      'collision-set-1',
+    ]);
+  });
+
   it('keeps physical radii separate from render scale and appearance metadata', () => {
     const simulation = new NBodySimulation([
       {

@@ -8,6 +8,10 @@ import type {
   Vector3Tuple,
 } from './types';
 import { analyzeCollision, type CollisionAnalysis } from './collision-model';
+import {
+  CollisionBroadphase,
+  type CollisionBroadphaseAlgorithm,
+} from './collision-broadphase';
 import { AdaptiveGravitySolver, type GravityAlgorithm } from './gravity-solver';
 
 const COMPONENTS_PER_BODY = 3;
@@ -56,6 +60,7 @@ export class NBodySimulation {
   readonly collisions: boolean;
 
   private readonly gravitySolver: AdaptiveGravitySolver;
+  private readonly collisionBroadphase = new CollisionBroadphase();
   private idsData: string[] = [];
   private namesData: string[] = [];
   private colorsData: string[] = [];
@@ -162,6 +167,10 @@ export class NBodySimulation {
 
   get gravityAlgorithm(): GravityAlgorithm {
     return this.gravitySolver.algorithm;
+  }
+
+  get collisionAlgorithm(): CollisionBroadphaseAlgorithm {
+    return this.collisionBroadphase.algorithm;
   }
 
   addBody(body: BodyDefinition): void {
@@ -322,57 +331,51 @@ export class NBodySimulation {
   }
 
   private resolveCollisions(): void {
-    for (let bodyIndex = 0; bodyIndex < this.count; bodyIndex += 1) {
-      const offset = bodyIndex * COMPONENTS_PER_BODY;
+    const pair = this.collisionBroadphase.findFirst(this.positionData, this.radiusData);
+    if (pair === undefined) {
+      return;
+    }
 
-      for (let otherIndex = bodyIndex + 1; otherIndex < this.count; otherIndex += 1) {
-        const otherOffset = otherIndex * COMPONENTS_PER_BODY;
-        const relativePosition: Vector3Tuple = [
-          this.positionData[otherOffset]! - this.positionData[offset]!,
-          this.positionData[otherOffset + 1]! - this.positionData[offset + 1]!,
-          this.positionData[otherOffset + 2]! - this.positionData[offset + 2]!,
-        ];
-        const combinedRadius = this.radiusData[bodyIndex]! + this.radiusData[otherIndex]!;
+    const [bodyIndex, otherIndex] = pair;
+    const offset = bodyIndex * COMPONENTS_PER_BODY;
+    const otherOffset = otherIndex * COMPONENTS_PER_BODY;
+    const relativePosition: Vector3Tuple = [
+      this.positionData[otherOffset]! - this.positionData[offset]!,
+      this.positionData[otherOffset + 1]! - this.positionData[offset + 1]!,
+      this.positionData[otherOffset + 2]! - this.positionData[offset + 2]!,
+    ];
+    const analysis = analyzeCollision({
+      firstMass: this.massData[bodyIndex]!,
+      secondMass: this.massData[otherIndex]!,
+      firstRadius: this.radiusData[bodyIndex]!,
+      secondRadius: this.radiusData[otherIndex]!,
+      firstKind: this.kindsData[bodyIndex]!,
+      secondKind: this.kindsData[otherIndex]!,
+      relativePosition,
+      relativeVelocity: [
+        this.velocityData[otherOffset]! - this.velocityData[offset]!,
+        this.velocityData[otherOffset + 1]! - this.velocityData[offset + 1]!,
+        this.velocityData[otherOffset + 2]! - this.velocityData[offset + 2]!,
+      ],
+      gravitationalConstant: this.gravitationalConstant,
+    });
+    const participants: readonly [string, string] = [
+      this.idsData[bodyIndex]!,
+      this.idsData[otherIndex]!,
+    ];
 
-        if (Math.hypot(...relativePosition) > combinedRadius) {
-          continue;
-        }
-
-        const analysis = analyzeCollision({
-          firstMass: this.massData[bodyIndex]!,
-          secondMass: this.massData[otherIndex]!,
-          firstRadius: this.radiusData[bodyIndex]!,
-          secondRadius: this.radiusData[otherIndex]!,
-          firstKind: this.kindsData[bodyIndex]!,
-          secondKind: this.kindsData[otherIndex]!,
-          relativePosition,
-          relativeVelocity: [
-            this.velocityData[otherOffset]! - this.velocityData[offset]!,
-            this.velocityData[otherOffset + 1]! - this.velocityData[offset + 1]!,
-            this.velocityData[otherOffset + 2]! - this.velocityData[offset + 2]!,
-          ],
-          gravitationalConstant: this.gravitationalConstant,
-        });
-        const participants: readonly [string, string] = [
-          this.idsData[bodyIndex]!,
-          this.idsData[otherIndex]!,
-        ];
-
-        if (analysis.outcome === 'hit-and-run') {
-          this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
-          this.recordCollision(participants, analysis, 0);
-        } else if (analysis.outcome === 'disruption') {
-          // A credible disruptive impact requires a hydrodynamic/SPH solver. Keep
-          // the two resolved masses and separate them instead of inventing a
-          // handful of spherical fragments that would be mistaken for physics.
-          this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
-          this.recordCollision(participants, analysis, 0);
-        } else {
-          this.recordCollision(participants, analysis, 1);
-          this.mergePair(bodyIndex, otherIndex, analysis);
-        }
-        return;
-      }
+    if (analysis.outcome === 'hit-and-run') {
+      this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
+      this.recordCollision(participants, analysis, 0);
+    } else if (analysis.outcome === 'disruption') {
+      // A credible disruptive impact requires a hydrodynamic/SPH solver. Keep
+      // the two resolved masses and separate them instead of inventing a
+      // handful of spherical fragments that would be mistaken for physics.
+      this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
+      this.recordCollision(participants, analysis, 0);
+    } else {
+      this.recordCollision(participants, analysis, 1);
+      this.mergePair(bodyIndex, otherIndex, analysis);
     }
   }
 
