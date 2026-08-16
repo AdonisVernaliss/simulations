@@ -1,0 +1,215 @@
+.guided-experiments {
+  position: absolute;
+  z-index: 20;
+  top: 80px;
+  left: 50%;
+  width: min(620px, calc(100% - 36px));
+  color: #eaf6ff;
+  transform: translateX(-50%);
+}
+
+.experiment-trigger {
+  display: grid;
+  min-width: 260px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  margin: 0 auto;
+  padding: 8px 11px;
+  border: 1px solid rgba(126, 207, 248, 0.18);
+  border-radius: 11px;
+  color: #7891a4;
+  background: rgba(3, 11, 20, 0.8);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  backdrop-filter: blur(16px);
+}
+
+.experiment-trigger > span {
+  font-size: 0.5rem;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.experiment-trigger > strong {
+  overflow: hidden;
+  color: #cceeff;
+  font-size: 0.61rem;
+  font-weight: 650;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.experiment-trigger > i {
+  color: #72d6ff;
+  font-style: normal;
+  transition: transform 160ms ease;
+}
+
+.guided-experiments[data-open="true"] .experiment-trigger > i {
+  transform: rotate(180deg);
+}
+
+.experiment-sheet {
+  display: none;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(126, 207, 248, 0.17);
+  border-radius: 16px;
+  background: rgba(3, 10, 18, 0.94);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.48);
+  backdrop-filter: blur(24px);
+}
+
+.guided-experiments[data-open="true"] .experiment-sheet {
+  display: block;
+}
+
+.experiment-sheet > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(126, 207, 248, 0.1);
+}
+
+.experiment-sheet > header div {
+  display: grid;
+  gap: 3px;
+}
+
+.experiment-sheet > header span {
+  color: #68d4ff;
+  font-size: 0.49rem;
+  font-weight: 780;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.experiment-sheet > header strong {
+  color: #dcecf7;
+  font-size: 0.7rem;
+  font-weight: 590;
+}
+
+.experiment-sheet > header button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(126, 207, 248, 0.13);
+  border-radius: 8px;
+  color: #7e94a5;
+  background: rgba(11, 28, 40, 0.5);
+  cursor: pointer;
+}
+
+.experiment-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px;
+}
+
+.experiment-options > button {
+  display: grid;
+  min-height: 63px;
+  gap: 4px;
+  padding: 10px 11px;
+  border: 1px solid rgba(126, 207, 248, 0.1);
+  border-radius: 10px;
+  color: #73899b;
+  background: rgba(10, 24, 36, 0.48);
+  text-align: left;
+  cursor: pointer;
+}
+
+.experiment-options > button:hover,
+.experiment-options > button:focus-visible,
+.experiment-options > button[aria-pressed="true"] {
+  border-color: rgba(94, 211, 255, 0.36);
+  color: #e1f6ff;
+  background: rgba(20, 65, 87, 0.54);
+  outline: none;
+}
+
+.experiment-options span {
+  color: #64d4ff;
+  font-size: 0.48rem;
+  font-weight: 770;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.experiment-options strong {
+  font-size: 0.65rem;
+  font-weight: 580;
+  line-height: 1.28;
+}
+
+.experiment-lesson {
+  padding: 0 16px 15px;
+}
+
+.experiment-lesson > strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #f0f7fc;
+  font-size: 0.76rem;
+  font-weight: 630;
+}
+
+.experiment-lesson dl {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.experiment-lesson dl > div {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+}
+
+.experiment-lesson dt {
+  color: #587183;
+  font-size: 0.52rem;
+  font-weight: 730;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.experiment-lesson dd {
+  margin: 0;
+  color: #8fa5b5;
+  font-size: 0.58rem;
+  line-height: 1.42;
+}
+
+@media (max-width: 640px) {
+  .guided-experiments {
+    top: 70px;
+    width: calc(100% - 24px);
+  }
+
+  .experiment-trigger {
+    min-width: min(290px, 100%);
+  }
+
+  .experiment-options {
+    max-height: 228px;
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .experiment-options > button {
+    min-height: 54px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .experiment-trigger > i {
+    transition: none;
+  }
+}
