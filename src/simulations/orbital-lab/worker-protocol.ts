@@ -1,4 +1,4 @@
-import type { SimulationDiagnostics } from './model/types';
+import type { BodyDefinition, SimulationDiagnostics } from './model/types';
 
 export interface BodyMetadata {
   readonly id: string;
@@ -33,9 +33,16 @@ export interface TimeScaleRequest {
   readonly multiplier: number;
 }
 
+export interface AddBodyRequest {
+  readonly type: 'add-body';
+  readonly session: number;
+  readonly body: BodyDefinition;
+}
+
 export type WorkerRequest =
   | InitializeRequest
   | AdvanceRequest
+  | AddBodyRequest
   | PauseRequest
   | TimeScaleRequest;
 
@@ -67,4 +74,3 @@ export interface ErrorResponse {
 }
 
 export type WorkerResponse = InitializedResponse | FrameResponse | ErrorResponse;
-

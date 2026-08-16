@@ -41,25 +41,21 @@ const postWithPositions = (response: WorkerResponse, positions: ArrayBuffer): vo
   workerScope.postMessage(response, [positions]);
 };
 
-const initialize = (session: number, presetId: string): void => {
-  activeSession = session;
-  activePreset = getPreset(presetId);
-  simulation = new NBodySimulation(activePreset.bodies, {
-    gravitationalConstant: 1,
-    softening: 0.0001,
-  });
-  clock = new FixedStepClock(activePreset.fixedStep, 16);
-  paused = false;
-  timeScaleMultiplier = 1;
-
-  const bodies: BodyMetadata[] = activePreset.bodies.map((body) => ({
-    id: body.id,
-    name: body.name,
-    color: body.color,
-    mass: body.mass,
-    radius: body.radius,
+const getBodyMetadata = (activeSimulation: NBodySimulation): BodyMetadata[] =>
+  activeSimulation.ids.map((id, index) => ({
+    id,
+    name: activeSimulation.names[index]!,
+    color: activeSimulation.colors[index]!,
+    mass: activeSimulation.masses[index]!,
+    radius: activeSimulation.radii[index]!,
   }));
-  const positions = createPositionBuffer(simulation.positions);
+
+const postInitialized = (recycledBuffer?: ArrayBuffer): void => {
+  if (simulation === undefined || activePreset === undefined) {
+    return;
+  }
+
+  const positions = createPositionBuffer(simulation.positions, recycledBuffer);
 
   postWithPositions(
     {
@@ -68,13 +64,27 @@ const initialize = (session: number, presetId: string): void => {
       presetId: activePreset.id,
       presetName: activePreset.name,
       presetSummary: activePreset.summary,
-      bodies,
+      bodies: getBodyMetadata(simulation),
       time: simulation.time,
       positions,
       diagnostics: simulation.getDiagnostics(),
     },
     positions,
   );
+};
+
+const initialize = (session: number, presetId: string): void => {
+  activeSession = session;
+  activePreset = getPreset(presetId);
+  simulation = new NBodySimulation(activePreset.bodies, {
+    collisions: true,
+    gravitationalConstant: 1,
+    softening: 0.0001,
+  });
+  clock = new FixedStepClock(activePreset.fixedStep, 16);
+  paused = false;
+  timeScaleMultiplier = 1;
+  postInitialized();
 };
 
 const advance = (request: AdvanceRequest): void => {
@@ -87,11 +97,18 @@ const advance = (request: AdvanceRequest): void => {
     return;
   }
 
+  const previousBodyCount = simulation.count;
   const result = clock.advance(
     Math.min(request.elapsedSeconds, 0.25),
     paused ? 0 : activePreset.timeScale * timeScaleMultiplier,
     (deltaTime) => simulation?.step(deltaTime),
   );
+
+  if (simulation.count !== previousBodyCount) {
+    postInitialized(request.positionBuffer);
+    return;
+  }
+
   const positions = createPositionBuffer(simulation.positions, request.positionBuffer);
 
   postWithPositions(
@@ -118,6 +135,15 @@ workerScope.onmessage = (event: MessageEvent<WorkerRequest>): void => {
       case 'advance':
         advance(request);
         break;
+      case 'add-body':
+        if (request.session === activeSession && simulation !== undefined) {
+          if (simulation.count >= 128) {
+            throw new RangeError('The interactive body limit is 128');
+          }
+          simulation.addBody(request.body);
+          postInitialized();
+        }
+        break;
       case 'set-paused':
         if (request.session === activeSession) {
           paused = request.paused;
@@ -142,4 +168,3 @@ workerScope.onmessage = (event: MessageEvent<WorkerRequest>): void => {
     workerScope.postMessage(response);
   }
 };
-

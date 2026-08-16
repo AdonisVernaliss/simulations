@@ -30,7 +30,8 @@ body {
 }
 
 button,
-select {
+select,
+input {
   color: inherit;
   font: inherit;
 }
@@ -321,6 +322,7 @@ canvas {
 }
 
 select,
+.form-field input,
 .button {
   min-height: 42px;
   border: 1px solid rgba(150, 188, 229, 0.15);
@@ -337,6 +339,100 @@ select {
   padding: 0 34px 0 12px;
   color: #d9e6f6;
   cursor: pointer;
+}
+
+.body-dialog {
+  width: min(540px, calc(100vw - 28px));
+  padding: 0;
+  border: 1px solid rgba(157, 196, 237, 0.2);
+  border-radius: 20px;
+  color: #edf4ff;
+  background: rgba(7, 13, 22, 0.96);
+  box-shadow: 0 32px 100px rgba(0, 0, 0, 0.64);
+  backdrop-filter: blur(24px);
+}
+
+.body-dialog::backdrop {
+  background: rgba(0, 3, 8, 0.72);
+  backdrop-filter: blur(7px);
+}
+
+.body-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 24px;
+}
+
+.body-form header,
+.body-form footer,
+.form-field-wide,
+.form-error {
+  grid-column: 1 / -1;
+}
+
+.body-form header,
+.body-form footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.body-form h2 {
+  margin: 5px 0 0;
+  font-size: 1.45rem;
+  font-weight: 620;
+  letter-spacing: -0.035em;
+}
+
+.dialog-close {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+  color: #8fa0b5;
+  background: rgba(111, 143, 181, 0.08);
+  cursor: pointer;
+  font-size: 1.4rem;
+}
+
+.form-field > span {
+  display: block;
+  margin: 0 0 6px 4px;
+  color: #8293a9;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.form-field input {
+  width: 100%;
+  padding: 0 12px;
+  color: #e4eefb;
+}
+
+.form-field input:focus {
+  border-color: rgba(130, 191, 255, 0.55);
+  outline: 0;
+}
+
+.color-field input {
+  min-height: 44px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.form-error {
+  min-height: 1.1rem;
+  margin: -2px 0 0;
+  color: #ff9a9a;
+  font-size: 0.72rem;
+}
+
+.body-form footer {
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .button {
@@ -472,6 +568,11 @@ select:hover {
   .transport .button {
     flex: 1;
     min-width: 0;
+  }
+
+  .body-form {
+    gap: 11px;
+    padding: 18px;
   }
 }
 

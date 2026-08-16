@@ -34,6 +34,10 @@ export class OrbitalLab {
   private readonly qualitySelect: HTMLSelectElement;
   private readonly pauseButton: HTMLButtonElement;
   private readonly resetButton: HTMLButtonElement;
+  private readonly addBodyButton: HTMLButtonElement;
+  private readonly bodyDialog: HTMLDialogElement;
+  private readonly bodyForm: HTMLFormElement;
+  private readonly bodyFormError: HTMLElement;
   private readonly statusElement: HTMLElement;
   private readonly titleElement: HTMLElement;
   private readonly summaryElement: HTMLElement;
@@ -56,6 +60,8 @@ export class OrbitalLab {
   private activeQuality: QualityLevel = 'balanced';
   private slowFrameTime = 0;
   private fastFrameTime = 0;
+  private bodyCount = 0;
+  private customBodySequence = 0;
 
   constructor(root: HTMLElement) {
     root.innerHTML = this.createMarkup();
@@ -65,6 +71,10 @@ export class OrbitalLab {
     this.qualitySelect = requireElement(root, '[data-quality]');
     this.pauseButton = requireElement(root, '[data-pause]');
     this.resetButton = requireElement(root, '[data-reset]');
+    this.addBodyButton = requireElement(root, '[data-add-body]');
+    this.bodyDialog = requireElement(root, '[data-body-dialog]');
+    this.bodyForm = requireElement(root, '[data-body-form]');
+    this.bodyFormError = requireElement(root, '[data-body-error]');
     this.statusElement = requireElement(root, '[data-status]');
     this.titleElement = requireElement(root, '[data-title]');
     this.summaryElement = requireElement(root, '[data-summary]');
@@ -135,6 +145,7 @@ export class OrbitalLab {
     this.titleElement.textContent = details.presetName;
     this.summaryElement.textContent = details.presetSummary;
     this.bodyCountElement.textContent = String(details.bodies.length);
+    this.bodyCount = details.bodies.length;
     this.presetSelect.value = details.presetId;
     this.updateMetrics(frame, true);
     this.setStatus(this.paused ? 'Paused' : 'Running', this.paused ? 'paused' : 'running');
@@ -179,6 +190,57 @@ export class OrbitalLab {
     this.resetButton.addEventListener('click', () => {
       this.setStatus('Resetting model', 'loading');
       this.worker.initialize(this.activePresetId);
+    });
+
+    this.addBodyButton.addEventListener('click', () => {
+      const nameInput = requireElement<HTMLInputElement>(this.bodyForm, '[name="name"]');
+      nameInput.value = `Body ${this.bodyCount + 1}`;
+      this.bodyFormError.textContent = '';
+      this.bodyDialog.showModal();
+      nameInput.focus();
+      nameInput.select();
+    });
+
+    this.bodyForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+
+      if (!this.bodyForm.reportValidity()) {
+        return;
+      }
+
+      const values = new FormData(this.bodyForm);
+      const readNumber = (name: string): number => Number(values.get(name));
+      const name = String(values.get('name') ?? '').trim();
+      const mass = readNumber('mass');
+      const radius = readNumber('radius');
+      const positionX = readNumber('position-x');
+      const positionY = readNumber('position-y');
+      const velocityX = readNumber('velocity-x');
+      const velocityY = readNumber('velocity-y');
+      const color = String(values.get('color') ?? '#79d9ff');
+      const numericValues = [mass, radius, positionX, positionY, velocityX, velocityY];
+
+      if (!name || numericValues.some((value) => !Number.isFinite(value))) {
+        this.bodyFormError.textContent = 'Enter a name and finite numeric values.';
+        return;
+      }
+
+      this.customBodySequence += 1;
+      this.worker.addBody({
+        id: `custom-${this.customBodySequence}`,
+        name,
+        mass,
+        radius,
+        color,
+        position: [positionX, positionY, 0],
+        velocity: [velocityX, velocityY, 0],
+      });
+      this.setStatus('Adding body', 'loading');
+      this.bodyDialog.close();
+    });
+
+    this.bodyDialog.querySelectorAll<HTMLButtonElement>('[data-close-dialog]').forEach((button) => {
+      button.addEventListener('click', () => this.bodyDialog.close());
     });
 
     this.speedSelect.addEventListener('change', () => {
@@ -357,6 +419,7 @@ export class OrbitalLab {
                 Pause
               </button>
               <button class="button" type="button" data-reset>Reset</button>
+              <button class="button" type="button" data-add-body>Add body</button>
             </div>
 
             <label class="field">
@@ -381,6 +444,57 @@ export class OrbitalLab {
             </label>
           </div>
         </section>
+
+        <dialog class="body-dialog" data-body-dialog>
+          <form class="body-form" data-body-form>
+            <header>
+              <div>
+                <p class="eyebrow">Initial conditions</p>
+                <h2>Add an orbiting body</h2>
+              </div>
+              <button class="dialog-close" type="button" aria-label="Close" data-close-dialog>×</button>
+            </header>
+
+            <label class="form-field form-field-wide">
+              <span>Name</span>
+              <input name="name" maxlength="32" required />
+            </label>
+            <label class="form-field">
+              <span>Mass</span>
+              <input name="mass" type="number" value="0.001" min="0.000000001" max="10" step="any" required />
+            </label>
+            <label class="form-field">
+              <span>Visual radius</span>
+              <input name="radius" type="number" value="0.07" min="0.005" max="0.5" step="any" required />
+            </label>
+            <label class="form-field">
+              <span>Position X</span>
+              <input name="position-x" type="number" value="2" min="-50" max="50" step="any" required />
+            </label>
+            <label class="form-field">
+              <span>Position Y</span>
+              <input name="position-y" type="number" value="0" min="-50" max="50" step="any" required />
+            </label>
+            <label class="form-field">
+              <span>Velocity X</span>
+              <input name="velocity-x" type="number" value="0" min="-20" max="20" step="any" required />
+            </label>
+            <label class="form-field">
+              <span>Velocity Y</span>
+              <input name="velocity-y" type="number" value="0.7" min="-20" max="20" step="any" required />
+            </label>
+            <label class="form-field form-field-wide color-field">
+              <span>Color</span>
+              <input name="color" type="color" value="#79d9ff" />
+            </label>
+
+            <p class="form-error" data-body-error role="alert"></p>
+            <footer>
+              <button class="button" type="button" data-close-dialog>Cancel</button>
+              <button class="button button-primary" type="submit">Add to simulation</button>
+            </footer>
+          </form>
+        </dialog>
       </article>
     `;
   }

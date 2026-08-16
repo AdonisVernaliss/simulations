@@ -5,6 +5,7 @@ import type {
   WorkerResponse,
 } from './worker-protocol';
 import type { SimulationDiagnostics } from './model/types';
+import type { BodyDefinition } from './model/types';
 
 export interface SimulationFrame {
   readonly time: number;
@@ -79,6 +80,11 @@ export class SimulationWorkerClient {
 
   setTimeScale(multiplier: number): void {
     this.post({ type: 'set-time-scale', session: this.session, multiplier });
+  }
+
+  addBody(body: BodyDefinition): void {
+    this.initialized = false;
+    this.post({ type: 'add-body', session: this.session, body });
   }
 
   destroy(): void {
