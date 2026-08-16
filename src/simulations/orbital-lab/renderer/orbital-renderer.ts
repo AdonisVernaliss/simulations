@@ -716,6 +716,10 @@ export class OrbitalRenderer {
   }
 
   private updateTidalDeformation(positions: Float32Array): void {
+    if (this.compactVisuals.length === 0) {
+      return;
+    }
+
     for (let bodyIndex = 0; bodyIndex < this.bodies.length; bodyIndex += 1) {
       const body = this.bodies[bodyIndex];
       const visual = this.bodyVisuals[bodyIndex];
@@ -857,6 +861,7 @@ export class OrbitalRenderer {
 
   private updateVelocityVectors(positions: Float32Array, time: number): void {
     if (
+      !this.velocityVectorsVisible ||
       this.velocityVectors === undefined ||
       positions.length !== this.previousPositions.length ||
       time <= this.previousTime
