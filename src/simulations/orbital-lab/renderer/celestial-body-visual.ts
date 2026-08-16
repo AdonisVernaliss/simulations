@@ -226,19 +226,21 @@ const ACCRETION_DISK_FRAGMENT_SHADER = `
     float normalizedRadius = clamp((radius - 1.42) / (4.2 - 1.42), 0.0, 1.0);
     float innerFade = smoothstep(1.42, 1.58, radius);
     float outerFade = 1.0 - smoothstep(3.55, 4.2, radius);
-    float turbulence = sin(angle * 11.0 - uVisualTime * 2.4 + radius * 21.0);
-    turbulence += 0.55 * sin(angle * 23.0 - uVisualTime * 3.7 - radius * 37.0);
-    turbulence += (hash(floor(vDiskPosition * 34.0)) - 0.5) * 0.42;
-    float filaments = 0.72 + 0.28 * smoothstep(-0.75, 0.95, turbulence);
+    float warpedRadius = radius + sin(angle * 5.0 - uVisualTime * 0.42) * 0.055;
+    warpedRadius += sin(angle * 13.0 + uVisualTime * 0.31) * 0.022;
+    float broadBands = sin(warpedRadius * 31.0 - uVisualTime * 1.35);
+    float fineBands = sin(warpedRadius * 83.0 + angle * 2.0 - uVisualTime * 2.1);
+    float granular = hash(floor(vec2(angle * 24.0, radius * 46.0))) - 0.5;
+    float filaments = 0.76 + 0.09 * broadBands + 0.045 * fineBands + 0.02 * granular;
     vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
     float lineOfSightVelocity = dot(vWorldTangent, viewDirection);
     float doppler = mix(0.48, 1.62, smoothstep(-0.92, 0.92, lineOfSightVelocity));
-    vec3 outerColor = vec3(0.92, 0.19, 0.025);
-    vec3 middleColor = vec3(1.0, 0.57, 0.12);
+    vec3 outerColor = vec3(0.72, 0.14, 0.018);
+    vec3 middleColor = vec3(1.0, 0.48, 0.075);
     vec3 innerColor = vec3(1.0, 0.96, 0.82);
     vec3 color = mix(middleColor, outerColor, smoothstep(0.35, 1.0, normalizedRadius));
     color = mix(innerColor, color, smoothstep(0.0, 0.42, normalizedRadius));
-    float alpha = innerFade * outerFade * filaments * mix(0.48, 0.92, uActivity);
+    float alpha = innerFade * outerFade * filaments * mix(0.42, 0.82, uActivity);
     alpha *= 0.68 + 0.32 * (1.0 - normalizedRadius);
     if (alpha < 0.012) discard;
     gl_FragColor = vec4(color * doppler * mix(0.86, 1.25, uActivity), alpha);
@@ -363,7 +365,12 @@ export class CelestialMaterialLibrary {
     }
 
     if (body.kind === 'black-hole') {
-      return new MeshBasicMaterial({ color: 0x000000, toneMapped: false });
+      return new MeshBasicMaterial({
+        color: 0x000000,
+        colorWrite: false,
+        depthWrite: false,
+        toneMapped: false,
+      });
     }
 
     if (body.kind === 'neutron-star' || body.kind === 'pulsar') {
@@ -730,10 +737,10 @@ export class CelestialBodyVisual {
         new MeshBasicMaterial({
           color: 0xb5e9ff,
           transparent: true,
-          opacity: 0.095,
+          opacity: 0.038,
           blending: AdditiveBlending,
           depthWrite: false,
-          side: DoubleSide,
+          side: BackSide,
           toneMapped: false,
         }),
       );
@@ -748,10 +755,10 @@ export class CelestialBodyVisual {
         new MeshBasicMaterial({
           color: 0xeaf9ff,
           transparent: true,
-          opacity: 0.16,
+          opacity: 0.072,
           blending: AdditiveBlending,
           depthWrite: false,
-          side: DoubleSide,
+          side: BackSide,
           toneMapped: false,
         }),
       );
