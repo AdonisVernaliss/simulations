@@ -399,7 +399,7 @@ export class CelestialMaterialLibrary {
       map: texture,
       emissive: 0xffffff,
       emissiveMap: texture,
-      emissiveIntensity: 0.055,
+      emissiveIntensity: 0.105,
       roughness: body.kind === 'gas-giant' || body.kind === 'ice-giant' ? 0.88 : 0.74,
       metalness: 0,
     });
