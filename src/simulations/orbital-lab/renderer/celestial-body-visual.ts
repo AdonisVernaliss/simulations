@@ -111,6 +111,57 @@ const SUN_FRAGMENT_SHADER = `
   }
 `;
 
+const MOLTEN_FRAGMENT_SHADER = `
+  uniform float uTime;
+  uniform vec3 uColor;
+  varying vec3 vObjectNormal;
+  varying vec3 vViewNormal;
+
+  float hash(vec3 p) {
+    p = fract(p * 0.3183099 + 0.1);
+    p *= 17.0;
+    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+  }
+
+  float noise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x),
+          mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
+      mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x),
+          mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y),
+      f.z
+    );
+  }
+
+  float fbm(vec3 p) {
+    float value = 0.0;
+    float amplitude = 0.55;
+    for (int octave = 0; octave < 5; octave++) {
+      value += amplitude * noise(p);
+      p = p * 2.07 + vec3(4.2, 8.3, 2.7);
+      amplitude *= 0.47;
+    }
+    return value;
+  }
+
+  void main() {
+    vec3 advected = vObjectNormal * 6.8 + vec3(uTime * 0.025, 0.0, -uTime * 0.018);
+    float broad = fbm(advected);
+    float crustCells = fbm(vObjectNormal * 17.0 + vec3(0.0, uTime * 0.012, 0.0));
+    float fissures = 1.0 - smoothstep(0.045, 0.16, abs(crustCells - 0.54));
+    float exposedMelt = smoothstep(0.49, 0.73, broad) * 0.55 + fissures;
+    float limb = pow(clamp(vViewNormal.z, 0.0, 1.0), 0.28);
+    vec3 cooledRock = vec3(0.055, 0.024, 0.018) * (0.65 + broad * 0.55);
+    vec3 lava = mix(uColor * vec3(0.9, 0.16, 0.018), vec3(1.0, 0.9, 0.42), fissures);
+    vec3 color = mix(cooledRock, lava, clamp(exposedMelt, 0.0, 1.0));
+    color *= 0.76 + 0.24 * limb;
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
 const BLACK_HOLE_VERTEX_SHADER = `
   varying vec2 vUvPosition;
 
@@ -274,6 +325,18 @@ export class CelestialMaterialLibrary {
   }
 
   createSurfaceMaterial(body: BodyMetadata): Material {
+    if (body.surface === 'molten') {
+      return new ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColor: { value: new Color(body.color) },
+        },
+        vertexShader: SUN_VERTEX_SHADER,
+        fragmentShader: MOLTEN_FRAGMENT_SHADER,
+        toneMapped: false,
+      });
+    }
+
     if (body.kind === 'star') {
       return new ShaderMaterial({
         uniforms: {
@@ -425,19 +488,20 @@ export class CelestialBodyVisual {
       this.addCompactStarField(body.kind === 'pulsar');
     }
 
-    if (body.kind === 'star') {
+    if (body.kind === 'star' || body.surface === 'molten') {
       const glow = new Sprite(
         new SpriteMaterial({
           map: glowTexture,
-          color: body.color,
+          color: body.surface === 'molten' ? 0xff4f14 : body.color,
           transparent: true,
-          opacity: 0.7,
+          opacity: body.surface === 'molten' ? 0.24 : 0.7,
           blending: AdditiveBlending,
           depthWrite: false,
           toneMapped: false,
         }),
       );
-      glow.scale.set(3.6, 3.6, 1);
+      const glowScale = body.surface === 'molten' ? 2.2 : 3.6;
+      glow.scale.set(glowScale, glowScale, 1);
       glow.renderOrder = -1;
       this.root.add(glow);
     }
