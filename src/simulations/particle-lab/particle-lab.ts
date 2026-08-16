@@ -146,7 +146,6 @@ export class ParticleLab {
   start(): void {
     this.updateTrack();
     this.experiments.activate('read-track', false);
-    this.experiments.open();
     this.animationFrame = requestAnimationFrame(this.tick);
   }
 

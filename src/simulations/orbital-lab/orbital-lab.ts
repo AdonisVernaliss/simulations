@@ -273,8 +273,7 @@ export class OrbitalLab {
   start(): void {
     this.setStatus('Loading model', 'loading');
     this.worker.initialize(this.activePresetId);
-    this.experiments.activate('solar-system', false);
-    this.experiments.open();
+    this.experiments.activate(this.activePresetId as OrbitalExperimentId, false);
     this.animationFrame = requestAnimationFrame(this.tick);
   }
 
