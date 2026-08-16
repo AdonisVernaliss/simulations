@@ -45,9 +45,14 @@ const getBodyMetadata = (activeSimulation: NBodySimulation): BodyMetadata[] =>
   activeSimulation.ids.map((id, index) => ({
     id,
     name: activeSimulation.names[index]!,
+    kind: activeSimulation.kinds[index]!,
+    surface: activeSimulation.surfaces[index]!,
     color: activeSimulation.colors[index]!,
     mass: activeSimulation.masses[index]!,
     radius: activeSimulation.radii[index]!,
+    renderRadius: activeSimulation.renderRadii[index]!,
+    axialTilt: activeSimulation.axialTilts[index]!,
+    rotationRate: activeSimulation.rotationRates[index]!,
   }));
 
 const postInitialized = (recycledBuffer?: ArrayBuffer): void => {

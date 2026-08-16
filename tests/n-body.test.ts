@@ -113,6 +113,71 @@ describe('NBodySimulation', () => {
     expect(simulation.radii[0]).toBeCloseTo(Math.cbrt(0.2 ** 3 * 2), 12);
   });
 
+  it('keeps physical radii separate from render scale and appearance metadata', () => {
+    const simulation = new NBodySimulation([
+      {
+        id: 'earth',
+        name: 'Earth',
+        kind: 'terrestrial',
+        surface: 'earth',
+        mass: 1,
+        radius: 0.000_042_6,
+        renderRadius: 0.08,
+        color: '#6ca9ff',
+        axialTilt: 0.409,
+        rotationRate: 6.3,
+        position: [0, 0, 0],
+        velocity: [0, 0, 0],
+      },
+    ]);
+
+    expect(simulation.radii[0]).toBeCloseTo(0.000_042_6, 12);
+    expect(simulation.renderRadii[0]).toBeCloseTo(0.08, 12);
+    expect(simulation.kinds[0]).toBe('terrestrial');
+    expect(simulation.surfaces[0]).toBe('earth');
+    expect(simulation.axialTilts[0]).toBeCloseTo(0.409, 12);
+    expect(simulation.rotationRates[0]).toBeCloseTo(6.3, 12);
+  });
+
+  it('preserves the dominant appearance when ordinary bodies merge', () => {
+    const simulation = new NBodySimulation(
+      [
+        {
+          id: 'target',
+          name: 'Target',
+          kind: 'terrestrial',
+          surface: 'earth',
+          mass: 4,
+          radius: 0.2,
+          renderRadius: 0.3,
+          color: '#4477aa',
+          position: [-0.1, 0, 0],
+          velocity: [0, 0, 0],
+        },
+        {
+          id: 'projectile',
+          name: 'Projectile',
+          kind: 'rocky',
+          surface: 'mars',
+          mass: 1,
+          radius: 0.1,
+          renderRadius: 0.15,
+          color: '#aa5533',
+          position: [0.1, 0, 0],
+          velocity: [0, 0, 0],
+        },
+      ],
+      { collisions: true, gravitationalConstant: 0 },
+    );
+
+    simulation.step(0.001);
+
+    expect(simulation.count).toBe(1);
+    expect(simulation.kinds[0]).toBe('terrestrial');
+    expect(simulation.surfaces[0]).toBe('earth');
+    expect(simulation.renderRadii[0]).toBeCloseTo(Math.cbrt(0.3 ** 3 + 0.15 ** 3), 12);
+  });
+
   it('adds a body without resetting elapsed simulation time', () => {
     const simulation = createBinarySystem();
     simulation.step(0.01);

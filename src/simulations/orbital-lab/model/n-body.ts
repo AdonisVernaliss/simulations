@@ -1,5 +1,7 @@
 import type {
   BodyDefinition,
+  BodyKind,
+  BodySurface,
   SimulationDiagnostics,
   SimulationOptions,
   Vector3Tuple,
@@ -26,6 +28,21 @@ const assertBody = (body: BodyDefinition): void => {
     throw new RangeError(`Body ${body.id} must have a non-negative finite radius`);
   }
 
+  if (
+    body.renderRadius !== undefined &&
+    (!Number.isFinite(body.renderRadius) || body.renderRadius < 0)
+  ) {
+    throw new RangeError(`Body ${body.id} must have a non-negative finite render radius`);
+  }
+
+  if (body.axialTilt !== undefined && !Number.isFinite(body.axialTilt)) {
+    throw new RangeError(`Body ${body.id} must have a finite axial tilt`);
+  }
+
+  if (body.rotationRate !== undefined && !Number.isFinite(body.rotationRate)) {
+    throw new RangeError(`Body ${body.id} must have a finite rotation rate`);
+  }
+
   assertFiniteVector(body.position, `Body ${body.id} position`);
   assertFiniteVector(body.velocity, `Body ${body.id} velocity`);
 };
@@ -38,8 +55,13 @@ export class NBodySimulation {
   private idsData: string[] = [];
   private namesData: string[] = [];
   private colorsData: string[] = [];
+  private kindsData: BodyKind[] = [];
+  private surfacesData: BodySurface[] = [];
   private massData = new Float64Array();
   private radiusData = new Float64Array();
+  private renderRadiusData = new Float64Array();
+  private axialTiltData = new Float64Array();
+  private rotationRateData = new Float64Array();
   private positionData = new Float64Array();
   private velocityData = new Float64Array();
   private accelerationData = new Float64Array();
@@ -82,12 +104,32 @@ export class NBodySimulation {
     return this.colorsData;
   }
 
+  get kinds(): readonly BodyKind[] {
+    return this.kindsData;
+  }
+
+  get surfaces(): readonly BodySurface[] {
+    return this.surfacesData;
+  }
+
   get masses(): Float64Array {
     return this.massData;
   }
 
   get radii(): Float64Array {
     return this.radiusData;
+  }
+
+  get renderRadii(): Float64Array {
+    return this.renderRadiusData;
+  }
+
+  get axialTilts(): Float64Array {
+    return this.axialTiltData;
+  }
+
+  get rotationRates(): Float64Array {
+    return this.rotationRateData;
   }
 
   get positions(): Float64Array {
@@ -216,8 +258,13 @@ export class NBodySimulation {
     this.idsData = bodies.map((body) => body.id);
     this.namesData = bodies.map((body) => body.name);
     this.colorsData = bodies.map((body) => body.color);
+    this.kindsData = bodies.map((body) => body.kind ?? 'generic');
+    this.surfacesData = bodies.map((body) => body.surface ?? 'procedural');
     this.massData = new Float64Array(bodies.length);
     this.radiusData = new Float64Array(bodies.length);
+    this.renderRadiusData = new Float64Array(bodies.length);
+    this.axialTiltData = new Float64Array(bodies.length);
+    this.rotationRateData = new Float64Array(bodies.length);
     this.positionData = new Float64Array(bodies.length * COMPONENTS_PER_BODY);
     this.velocityData = new Float64Array(bodies.length * COMPONENTS_PER_BODY);
     this.accelerationData = new Float64Array(bodies.length * COMPONENTS_PER_BODY);
@@ -227,6 +274,9 @@ export class NBodySimulation {
       const offset = bodyIndex * COMPONENTS_PER_BODY;
       this.massData[bodyIndex] = body.mass;
       this.radiusData[bodyIndex] = body.radius;
+      this.renderRadiusData[bodyIndex] = body.renderRadius ?? body.radius;
+      this.axialTiltData[bodyIndex] = body.axialTilt ?? 0;
+      this.rotationRateData[bodyIndex] = body.rotationRate ?? 0;
 
       for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
         this.positionData[offset + component] = body.position[component]!;
@@ -300,6 +350,12 @@ export class NBodySimulation {
     const secondOffset = secondIndex * COMPONENTS_PER_BODY;
     const mergedPosition: number[] = [];
     const mergedVelocity: number[] = [];
+    const dominantIndex = firstMass >= secondMass ? firstIndex : secondIndex;
+    const mergedKind =
+      this.kindsData[firstIndex] === 'black-hole' ||
+      this.kindsData[secondIndex] === 'black-hole'
+        ? 'black-hole'
+        : this.kindsData[dominantIndex]!;
 
     for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
       mergedPosition.push(
@@ -317,12 +373,21 @@ export class NBodySimulation {
     const mergedBody: BodyDefinition = {
       id: `${this.idsData[firstIndex]}+${this.idsData[secondIndex]}`,
       name: `${this.namesData[firstIndex]} + ${this.namesData[secondIndex]}`,
+      kind: mergedKind,
+      surface: mergedKind === 'black-hole' ? 'none' : this.surfacesData[dominantIndex]!,
       mass: combinedMass,
-      radius: Math.cbrt(
-        this.radiusData[firstIndex]! ** 3 + this.radiusData[secondIndex]! ** 3,
+      radius:
+        mergedKind === 'black-hole'
+          ? this.getMergedBlackHoleRadius(firstIndex, secondIndex)
+          : Math.cbrt(
+              this.radiusData[firstIndex]! ** 3 + this.radiusData[secondIndex]! ** 3,
+            ),
+      renderRadius: Math.cbrt(
+        this.renderRadiusData[firstIndex]! ** 3 + this.renderRadiusData[secondIndex]! ** 3,
       ),
-      color:
-        firstMass >= secondMass ? this.colorsData[firstIndex]! : this.colorsData[secondIndex]!,
+      color: this.colorsData[dominantIndex]!,
+      axialTilt: this.axialTiltData[dominantIndex]!,
+      rotationRate: this.rotationRateData[dominantIndex]!,
       position: [mergedPosition[0]!, mergedPosition[1]!, mergedPosition[2]!],
       velocity: [mergedVelocity[0]!, mergedVelocity[1]!, mergedVelocity[2]!],
     };
@@ -337,9 +402,14 @@ export class NBodySimulation {
         remainingBodies.push({
           id: this.idsData[bodyIndex]!,
           name: this.namesData[bodyIndex]!,
+          kind: this.kindsData[bodyIndex]!,
+          surface: this.surfacesData[bodyIndex]!,
           mass: this.massData[bodyIndex]!,
           radius: this.radiusData[bodyIndex]!,
+          renderRadius: this.renderRadiusData[bodyIndex]!,
           color: this.colorsData[bodyIndex]!,
+          axialTilt: this.axialTiltData[bodyIndex]!,
+          rotationRate: this.rotationRateData[bodyIndex]!,
           position: [
             this.positionData[offset]!,
             this.positionData[offset + 1]!,
@@ -365,9 +435,14 @@ export class NBodySimulation {
       bodies.push({
         id: this.idsData[bodyIndex]!,
         name: this.namesData[bodyIndex]!,
+        kind: this.kindsData[bodyIndex]!,
+        surface: this.surfacesData[bodyIndex]!,
         mass: this.massData[bodyIndex]!,
         radius: this.radiusData[bodyIndex]!,
+        renderRadius: this.renderRadiusData[bodyIndex]!,
         color: this.colorsData[bodyIndex]!,
+        axialTilt: this.axialTiltData[bodyIndex]!,
+        rotationRate: this.rotationRateData[bodyIndex]!,
         position: [
           this.positionData[offset]!,
           this.positionData[offset + 1]!,
@@ -382,5 +457,16 @@ export class NBodySimulation {
     }
 
     return bodies;
+  }
+
+  private getMergedBlackHoleRadius(firstIndex: number, secondIndex: number): number {
+    const firstIsBlackHole = this.kindsData[firstIndex] === 'black-hole';
+    const secondIsBlackHole = this.kindsData[secondIndex] === 'black-hole';
+
+    if (firstIsBlackHole && secondIsBlackHole) {
+      return this.radiusData[firstIndex]! + this.radiusData[secondIndex]!;
+    }
+
+    return firstIsBlackHole ? this.radiusData[firstIndex]! : this.radiusData[secondIndex]!;
   }
 }

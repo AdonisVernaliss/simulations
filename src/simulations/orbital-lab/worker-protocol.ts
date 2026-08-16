@@ -1,11 +1,21 @@
-import type { BodyDefinition, SimulationDiagnostics } from './model/types';
+import type {
+  BodyDefinition,
+  BodyKind,
+  BodySurface,
+  SimulationDiagnostics,
+} from './model/types';
 
 export interface BodyMetadata {
   readonly id: string;
   readonly name: string;
+  readonly kind: BodyKind;
+  readonly surface: BodySurface;
   readonly color: string;
   readonly mass: number;
   readonly radius: number;
+  readonly renderRadius: number;
+  readonly axialTilt: number;
+  readonly rotationRate: number;
 }
 
 export interface InitializeRequest {
