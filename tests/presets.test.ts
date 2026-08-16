@@ -33,4 +33,21 @@ describe('orbital presets', () => {
       expect(Math.hypot(...diagnostics.linearMomentum)).toBeLessThan(1e-9);
     }
   });
+
+  it('includes a collision experiment that conserves mass and momentum while merging', () => {
+    const preset = presets.find((candidate) => candidate.id === 'head-on-collision');
+    expect(preset).toBeDefined();
+    const simulation = new NBodySimulation(preset!.bodies, {
+      collisions: true,
+      softening: 0.0001,
+    });
+
+    for (let index = 0; index < 4_000 && simulation.count > 1; index += 1) {
+      simulation.step(preset!.fixedStep);
+    }
+
+    expect(simulation.count).toBe(1);
+    expect(simulation.masses[0]).toBeCloseTo(2, 12);
+    expect(Math.hypot(...simulation.getDiagnostics().linearMomentum)).toBeLessThan(1e-12);
+  });
 });

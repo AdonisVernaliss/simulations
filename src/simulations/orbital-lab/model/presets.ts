@@ -155,6 +155,35 @@ export const presets = [
       }),
     ],
   },
+  {
+    id: 'head-on-collision',
+    name: 'Head-on collision',
+    summary: 'Two equal bodies fall together and merge in a perfectly inelastic collision.',
+    fixedStep: 0.0015,
+    timeScale: 0.6,
+    cameraDistance: 4.2,
+    trailSpan: 8,
+    bodies: [
+      body({
+        id: 'collision-left',
+        name: 'Left body',
+        mass: 1,
+        radius: 0.18,
+        color: '#ff9b63',
+        position: [-0.8, 0, 0],
+        velocity: [0.12, 0, 0],
+      }),
+      body({
+        id: 'collision-right',
+        name: 'Right body',
+        mass: 1,
+        radius: 0.18,
+        color: '#70cfff',
+        position: [0.8, 0, 0],
+        velocity: [-0.12, 0, 0],
+      }),
+    ],
+  },
 ] as const satisfies readonly SimulationPreset[];
 
 export type PresetId = (typeof presets)[number]['id'];
