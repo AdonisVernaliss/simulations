@@ -1,8 +1,10 @@
 import { getPreset, presets } from './model/presets';
 import {
   OrbitalRenderer,
+  type BodySelection,
   type QualityLevel,
 } from './renderer/orbital-renderer';
+import type { BodyMetadata } from './worker-protocol';
 import {
   SimulationWorkerClient,
   type SimulationDetails,
@@ -36,6 +38,7 @@ export class OrbitalLab {
   private readonly resetButton: HTMLButtonElement;
   private readonly addBodyButton: HTMLButtonElement;
   private readonly vectorsButton: HTMLButtonElement;
+  private readonly systemViewButton: HTMLButtonElement;
   private readonly bodyDialog: HTMLDialogElement;
   private readonly bodyForm: HTMLFormElement;
   private readonly bodyFormError: HTMLElement;
@@ -48,6 +51,14 @@ export class OrbitalLab {
   private readonly energyDriftElement: HTMLElement;
   private readonly momentumElement: HTMLElement;
   private readonly qualityActiveElement: HTMLElement;
+  private readonly bodyListElement: HTMLElement;
+  private readonly inspectorElement: HTMLElement;
+  private readonly selectedNameElement: HTMLElement;
+  private readonly selectedMassElement: HTMLElement;
+  private readonly selectedRadiusElement: HTMLElement;
+  private readonly selectedPositionElement: HTMLElement;
+  private readonly focusBodyButton: HTMLButtonElement;
+  private readonly closeInspectorButton: HTMLButtonElement;
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   private animationFrame = 0;
@@ -64,6 +75,8 @@ export class OrbitalLab {
   private bodyCount = 0;
   private customBodySequence = 0;
   private vectorsVisible = false;
+  private bodies: readonly BodyMetadata[] = [];
+  private selectedBodyIndex: number | undefined;
 
   constructor(root: HTMLElement) {
     root.innerHTML = this.createMarkup();
@@ -75,6 +88,7 @@ export class OrbitalLab {
     this.resetButton = requireElement(root, '[data-reset]');
     this.addBodyButton = requireElement(root, '[data-add-body]');
     this.vectorsButton = requireElement(root, '[data-vectors]');
+    this.systemViewButton = requireElement(root, '[data-system-view]');
     this.bodyDialog = requireElement(root, '[data-body-dialog]');
     this.bodyForm = requireElement(root, '[data-body-form]');
     this.bodyFormError = requireElement(root, '[data-body-error]');
@@ -87,8 +101,18 @@ export class OrbitalLab {
     this.energyDriftElement = requireElement(root, '[data-energy-drift]');
     this.momentumElement = requireElement(root, '[data-momentum]');
     this.qualityActiveElement = requireElement(root, '[data-quality-active]');
+    this.bodyListElement = requireElement(root, '[data-body-list]');
+    this.inspectorElement = requireElement(root, '[data-inspector]');
+    this.selectedNameElement = requireElement(root, '[data-selected-name]');
+    this.selectedMassElement = requireElement(root, '[data-selected-mass]');
+    this.selectedRadiusElement = requireElement(root, '[data-selected-radius]');
+    this.selectedPositionElement = requireElement(root, '[data-selected-position]');
+    this.focusBodyButton = requireElement(root, '[data-focus-body]');
+    this.closeInspectorButton = requireElement(root, '[data-close-inspector]');
 
-    this.renderer = new OrbitalRenderer(this.canvas);
+    this.renderer = new OrbitalRenderer(this.canvas, (selection) => {
+      this.handleBodySelection(selection);
+    });
     this.worker = new SimulationWorkerClient({
       onInitialized: (details, frame) => this.handleInitialized(details, frame),
       onFrame: (frame) => this.handleFrame(frame),
@@ -138,6 +162,8 @@ export class OrbitalLab {
   private handleInitialized(details: SimulationDetails, frame: SimulationFrame): void {
     const preset = getPreset(details.presetId);
     this.activePresetId = details.presetId;
+    this.bodies = details.bodies;
+    this.selectedBodyIndex = undefined;
     this.initialEnergy = frame.diagnostics.totalEnergy;
     this.renderer.setBodies(
       details.bodies,
@@ -150,12 +176,14 @@ export class OrbitalLab {
     this.bodyCountElement.textContent = String(details.bodies.length);
     this.bodyCount = details.bodies.length;
     this.presetSelect.value = details.presetId;
+    this.renderBodyList();
     this.updateMetrics(frame, true);
     this.setStatus(this.paused ? 'Paused' : 'Running', this.paused ? 'paused' : 'running');
   }
 
   private handleFrame(frame: SimulationFrame): void {
     this.renderer.update(frame.positions, frame.time);
+    this.updateSelectedPosition(frame.positions);
     this.updateMetrics(frame);
 
     if (frame.droppedTime > 0.01 && this.qualityMode === 'auto') {
@@ -208,6 +236,20 @@ export class OrbitalLab {
       this.vectorsVisible = !this.vectorsVisible;
       this.vectorsButton.setAttribute('aria-pressed', String(this.vectorsVisible));
       this.renderer.setVelocityVectorsVisible(this.vectorsVisible);
+    });
+
+    this.systemViewButton.addEventListener('click', () => {
+      this.renderer.focusSystem();
+    });
+
+    this.focusBodyButton.addEventListener('click', () => {
+      if (this.selectedBodyIndex !== undefined) {
+        this.renderer.focusBody(this.selectedBodyIndex);
+      }
+    });
+
+    this.closeInspectorButton.addEventListener('click', () => {
+      this.renderer.selectBody(undefined);
     });
 
     this.bodyForm.addEventListener('submit', (event) => {
@@ -280,6 +322,10 @@ export class OrbitalLab {
       if (event.code === 'Space' && !isInteractive) {
         event.preventDefault();
         this.togglePaused();
+      }
+
+      if (event.code === 'Escape' && !this.bodyDialog.open) {
+        this.renderer.selectBody(undefined);
       }
     });
 
@@ -355,6 +401,66 @@ export class OrbitalLab {
     this.statusElement.dataset.state = state;
   }
 
+  private handleBodySelection(selection: BodySelection | undefined): void {
+    this.selectedBodyIndex = selection?.index;
+    const isOpen = selection !== undefined;
+    this.inspectorElement.dataset.open = String(isOpen);
+    this.inspectorElement.setAttribute('aria-hidden', String(!isOpen));
+
+    if (selection !== undefined) {
+      this.selectedNameElement.textContent = selection.body.name;
+      this.selectedMassElement.textContent = selection.body.mass.toExponential(4);
+      this.selectedRadiusElement.textContent = formatNumber(selection.body.radius, 4);
+      this.selectedPositionElement.textContent = 'Updating…';
+    }
+
+    this.bodyListElement
+      .querySelectorAll<HTMLButtonElement>('[data-body-index]')
+      .forEach((button) => {
+        const selected = Number(button.dataset.bodyIndex) === selection?.index;
+        button.dataset.selected = String(selected);
+        button.setAttribute('aria-pressed', String(selected));
+      });
+  }
+
+  private updateSelectedPosition(positions: Float32Array): void {
+    if (this.selectedBodyIndex === undefined) {
+      return;
+    }
+
+    const offset = this.selectedBodyIndex * 3;
+    if (positions.length < offset + 3) {
+      return;
+    }
+
+    const x = formatNumber(positions[offset] ?? 0, 3);
+    const y = formatNumber(positions[offset + 1] ?? 0, 3);
+    const z = formatNumber(positions[offset + 2] ?? 0, 3);
+    this.selectedPositionElement.textContent = `${x}, ${y}, ${z}`;
+  }
+
+  private renderBodyList(): void {
+    this.bodyListElement.replaceChildren(
+      ...this.bodies.map((body, bodyIndex) => {
+        const button = document.createElement('button');
+        const swatch = document.createElement('span');
+        const label = document.createElement('span');
+        button.type = 'button';
+        button.className = 'body-chip';
+        button.dataset.bodyIndex = String(bodyIndex);
+        button.dataset.selected = 'false';
+        button.setAttribute('aria-pressed', 'false');
+        button.setAttribute('aria-label', `Select and follow ${body.name}`);
+        swatch.className = 'body-swatch';
+        swatch.style.setProperty('--body-color', body.color);
+        label.textContent = body.name;
+        button.append(swatch, label);
+        button.addEventListener('click', () => this.renderer.focusBody(bodyIndex));
+        return button;
+      }),
+    );
+  }
+
   private populatePresets(): void {
     this.presetSelect.replaceChildren(
       ...presets.map((preset) => {
@@ -377,6 +483,10 @@ export class OrbitalLab {
             </span>
             <span>Orbital Mechanics Lab</span>
           </div>
+          <label class="system-picker">
+            <span>System</span>
+            <select data-preset aria-label="Orbital system"></select>
+          </label>
           <div class="status" data-status data-state="loading" role="status">Loading model</div>
         </header>
 
@@ -384,27 +494,42 @@ export class OrbitalLab {
           <canvas data-canvas aria-label="Three-dimensional view of orbiting bodies"></canvas>
 
           <div class="scene-heading">
-            <p class="eyebrow">Active system</p>
+            <p class="eyebrow">Live orbital system</p>
             <h1 data-title>Idealized solar system</h1>
             <p data-summary>Loading orbital model…</p>
           </div>
 
+          <nav class="tool-rail" aria-label="Scene tools">
+            <button class="tool-button" type="button" data-add-body>
+              <span aria-hidden="true">＋</span>
+              <small>Add</small>
+            </button>
+            <button class="tool-button" type="button" data-vectors aria-pressed="false">
+              <span aria-hidden="true">↗</span>
+              <small>Vectors</small>
+            </button>
+            <button class="tool-button" type="button" data-system-view>
+              <span aria-hidden="true">◎</span>
+              <small>System</small>
+            </button>
+          </nav>
+
           <aside class="metrics" aria-label="Live physical diagnostics">
             <div class="metric metric-primary">
-              <span>Simulation time</span>
+              <span>System time</span>
               <strong><span data-time>0.00</span> <small>units</small></strong>
             </div>
-            <div class="metric-grid">
+            <div class="metric-strip">
               <div class="metric">
-                <span>Frame rate</span>
-                <strong><span data-fps>—</span> <small>fps</small></strong>
+                <span>FPS</span>
+                <strong data-fps>—</strong>
               </div>
               <div class="metric">
                 <span>Bodies</span>
                 <strong data-body-count>—</strong>
               </div>
               <div class="metric">
-                <span>Energy drift</span>
+                <span>Energy Δ</span>
                 <strong data-energy-drift>—</strong>
               </div>
               <div class="metric">
@@ -412,24 +537,46 @@ export class OrbitalLab {
                 <strong data-momentum>—</strong>
               </div>
             </div>
-            <p class="quality-note">Rendering: <span data-quality-active>balanced</span></p>
+            <p class="quality-note">Render <span data-quality-active>balanced</span></p>
           </aside>
 
-          <div class="hint" aria-hidden="true">Drag to orbit · Scroll to zoom · Space to pause</div>
+          <aside class="object-inspector" data-inspector data-open="false" aria-hidden="true">
+            <header>
+              <div>
+                <p class="eyebrow">Selected object</p>
+                <h2 data-selected-name>Object</h2>
+              </div>
+              <button class="inspector-close" type="button" data-close-inspector aria-label="Close object inspector">×</button>
+            </header>
+            <dl>
+              <div>
+                <dt>Relative mass</dt>
+                <dd data-selected-mass>—</dd>
+              </div>
+              <div>
+                <dt>Display radius</dt>
+                <dd data-selected-radius>—</dd>
+              </div>
+              <div>
+                <dt>Position x, y, z</dt>
+                <dd data-selected-position>—</dd>
+              </div>
+            </dl>
+            <button class="button button-primary inspector-action" type="button" data-focus-body>
+              Follow object
+            </button>
+          </aside>
+
+          <div class="hint" aria-hidden="true">Drag to orbit · Scroll to zoom · Click an object to inspect</div>
+
+          <nav class="body-ribbon" data-body-list aria-label="Celestial objects"></nav>
 
           <div class="control-dock" aria-label="Simulation controls">
-            <label class="field field-preset">
-              <span>System</span>
-              <select data-preset aria-label="Orbital system"></select>
-            </label>
-
             <div class="transport">
               <button class="button button-primary" type="button" data-pause aria-pressed="false">
                 Pause
               </button>
               <button class="button" type="button" data-reset>Reset</button>
-              <button class="button" type="button" data-add-body>Add body</button>
-              <button class="button" type="button" data-vectors aria-pressed="false">Vectors</button>
             </div>
 
             <label class="field">
@@ -452,6 +599,8 @@ export class OrbitalLab {
                 <option value="high">High</option>
               </select>
             </label>
+
+            <span class="key-hint">Space</span>
           </div>
         </section>
 
