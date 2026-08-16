@@ -112,4 +112,24 @@ describe('NBodySimulation', () => {
     expect(simulation.velocities[0]).toBeCloseTo(0, 12);
     expect(simulation.radii[0]).toBeCloseTo(Math.cbrt(0.2 ** 3 * 2), 12);
   });
+
+  it('adds a body without resetting elapsed simulation time', () => {
+    const simulation = createBinarySystem();
+    simulation.step(0.01);
+
+    simulation.addBody({
+      id: 'visitor',
+      name: 'Visitor',
+      mass: 0.01,
+      radius: 0.03,
+      color: '#ffffff',
+      position: [0, 2, 0],
+      velocity: [-0.5, 0, 0],
+    });
+
+    expect(simulation.count).toBe(3);
+    expect(simulation.ids).toContain('visitor');
+    expect(simulation.positions).toHaveLength(9);
+    expect(simulation.time).toBeCloseTo(0.01, 12);
+  });
 });

@@ -98,6 +98,10 @@ export class NBodySimulation {
     return this.velocityData;
   }
 
+  addBody(body: BodyDefinition): void {
+    this.replaceBodies([...this.createBodyDefinitions(), body]);
+  }
+
   step(deltaTime: number): void {
     if (!Number.isFinite(deltaTime) || deltaTime <= 0) {
       throw new RangeError('Time step must be positive and finite');
@@ -351,5 +355,32 @@ export class NBodySimulation {
     }
 
     this.replaceBodies(remainingBodies);
+  }
+
+  private createBodyDefinitions(): BodyDefinition[] {
+    const bodies: BodyDefinition[] = [];
+
+    for (let bodyIndex = 0; bodyIndex < this.count; bodyIndex += 1) {
+      const offset = bodyIndex * COMPONENTS_PER_BODY;
+      bodies.push({
+        id: this.idsData[bodyIndex]!,
+        name: this.namesData[bodyIndex]!,
+        mass: this.massData[bodyIndex]!,
+        radius: this.radiusData[bodyIndex]!,
+        color: this.colorsData[bodyIndex]!,
+        position: [
+          this.positionData[offset]!,
+          this.positionData[offset + 1]!,
+          this.positionData[offset + 2]!,
+        ],
+        velocity: [
+          this.velocityData[offset]!,
+          this.velocityData[offset + 1]!,
+          this.velocityData[offset + 2]!,
+        ],
+      });
+    }
+
+    return bodies;
   }
 }
