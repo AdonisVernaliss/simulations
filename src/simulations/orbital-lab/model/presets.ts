@@ -542,7 +542,7 @@ export const presets = [
         kind: 'black-hole',
         surface: 'quasar',
         mass: 8,
-        radius: 0.045,
+        radius: 0.16,
         renderRadius: 0.22,
         color: '#fff0c2',
         axialTilt: 0.32,

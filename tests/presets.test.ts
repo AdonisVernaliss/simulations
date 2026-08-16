@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import { NBodySimulation } from '../src/simulations/orbital-lab/model/n-body';
-import { presets } from '../src/simulations/orbital-lab/model/presets';
+import {
+  AU_SOLAR_MASS_TIME_UNIT_SECONDS,
+  presets,
+} from '../src/simulations/orbital-lab/model/presets';
 
 describe('orbital presets', () => {
   it('use unique preset and body identifiers', () => {
@@ -65,6 +68,22 @@ describe('orbital presets', () => {
 
     expect(simulation.kinds[blackHoleIndex]).toBe('black-hole');
     expect(simulation.velocities[blackHoleIndex * 3 + 1]).not.toBeCloseTo(initialVelocity, 8);
+  });
+
+  it('includes active, neutron-star, and pulsar systems as massive shared-scene objects', () => {
+    const quasar = presets.find((preset) => preset.id === 'quasar-system');
+    const pulsarSystem = presets.find((preset) => preset.id === 'pulsar-system');
+    const neutronBinary = presets.find((preset) => preset.id === 'neutron-star-binary');
+    const activeNucleus = quasar?.bodies.find((body) => body.surface === 'quasar');
+    const pulsar = pulsarSystem?.bodies.find((body) => body.kind === 'pulsar');
+
+    expect(activeNucleus?.kind).toBe('black-hole');
+    expect(activeNucleus!.radius / activeNucleus!.mass).toBeCloseTo(0.02, 12);
+    expect(pulsar?.mass).toBeGreaterThan(1);
+    expect(
+      (Math.PI * 2 * AU_SOLAR_MASS_TIME_UNIT_SECONDS) / pulsar!.rotationRate!,
+    ).toBeCloseTo(1.337, 9);
+    expect(neutronBinary?.bodies.every((body) => body.kind === 'neutron-star')).toBe(true);
   });
 
   it('includes a collision experiment that conserves mass and momentum while merging', () => {
