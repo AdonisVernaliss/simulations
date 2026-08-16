@@ -120,6 +120,21 @@ canvas {
   text-transform: uppercase;
 }
 
+.lab-index-link {
+  margin-left: 8px;
+  padding-left: 18px;
+  border-left: 1px solid rgba(157, 208, 255, 0.14);
+  color: #71869b;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.lab-index-link:hover {
+  color: #b9ddf5;
+}
+
 .brand-mark {
   position: relative;
   display: grid;
@@ -734,6 +749,13 @@ select:hover {
 
   .brand > span:last-child {
     display: none;
+  }
+
+  .lab-index-link {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+    font-size: 0.52rem;
   }
 
   .brand-mark {

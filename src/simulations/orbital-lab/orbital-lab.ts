@@ -482,6 +482,7 @@ export class OrbitalLab {
               <span></span>
             </span>
             <span>Orbital Mechanics Lab</span>
+            <a class="lab-index-link" href="?lab=catalog">All labs</a>
           </div>
           <label class="system-picker">
             <span>System</span>

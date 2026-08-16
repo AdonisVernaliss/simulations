@@ -1,0 +1,317 @@
+.catalog-shell,
+.research-shell {
+  min-height: 100vh;
+  color: #eaf4ff;
+  background:
+    radial-gradient(circle at 72% 18%, rgba(27, 80, 119, 0.2), transparent 29%),
+    radial-gradient(circle at 18% 74%, rgba(67, 32, 103, 0.14), transparent 27%),
+    linear-gradient(rgba(32, 65, 91, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(32, 65, 91, 0.045) 1px, transparent 1px),
+    #02050a;
+  background-size: auto, auto, 48px 48px, 48px 48px, auto;
+}
+
+.catalog-header {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(20px, 4vw, 64px);
+  border-bottom: 1px solid rgba(146, 202, 255, 0.1);
+  background: rgba(2, 7, 14, 0.66);
+  backdrop-filter: blur(18px);
+}
+
+.catalog-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #f2f8ff;
+  font-size: 0.7rem;
+  font-weight: 730;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.catalog-brand-mark {
+  position: relative;
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid rgba(115, 203, 255, 0.65);
+  border-radius: 50%;
+  transform: rotate(-25deg) scaleY(0.46);
+}
+
+.catalog-brand-mark::before,
+.catalog-brand-mark::after {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #86dcff;
+  box-shadow: 0 0 12px #4dc6ff;
+  content: "";
+}
+
+.catalog-brand-mark::before {
+  left: -2px;
+}
+
+.catalog-brand-mark::after {
+  right: -2px;
+}
+
+.catalog-brand-mark span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffe4a6;
+  box-shadow: 0 0 18px rgba(255, 201, 91, 0.96);
+  transform: scaleY(2.16);
+}
+
+.catalog-open {
+  padding: 9px 13px;
+  border: 1px solid rgba(130, 201, 255, 0.18);
+  border-radius: 9px;
+  color: #9fc6e4;
+  background: rgba(20, 52, 76, 0.2);
+  font-size: 0.64rem;
+  font-weight: 680;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.catalog-hero {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: clamp(72px, 12vh, 132px) 0 58px;
+}
+
+.catalog-kicker,
+.catalog-field {
+  margin: 0;
+  color: #62c8ff;
+  font-size: 0.62rem;
+  font-weight: 760;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.catalog-hero h1,
+.research-card h1 {
+  max-width: 900px;
+  margin: 13px 0 22px;
+  color: #f3f8ff;
+  font-size: clamp(3rem, 7vw, 6.7rem);
+  font-weight: 510;
+  letter-spacing: -0.065em;
+  line-height: 0.9;
+}
+
+.catalog-hero > p:last-child,
+.research-card > p {
+  max-width: 660px;
+  margin: 0;
+  color: #8fa4b9;
+  font-size: 0.86rem;
+  line-height: 1.7;
+}
+
+.catalog-grid {
+  display: grid;
+  width: min(1180px, calc(100% - 40px));
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin: 0 auto;
+}
+
+.catalog-card {
+  position: relative;
+  display: flex;
+  min-height: 315px;
+  grid-column: span 2;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 25px;
+  border: 1px solid rgba(147, 202, 255, 0.12);
+  border-radius: 19px;
+  background: linear-gradient(145deg, rgba(10, 23, 37, 0.78), rgba(4, 10, 18, 0.7));
+  box-shadow: 0 24px 65px rgba(0, 0, 0, 0.22);
+}
+
+.catalog-card:nth-child(n + 4) {
+  grid-column: span 3;
+}
+
+.catalog-card[data-status="research"] {
+  background: linear-gradient(145deg, rgba(9, 18, 29, 0.63), rgba(4, 9, 16, 0.6));
+}
+
+.catalog-card-orbit {
+  position: absolute;
+  top: 19px;
+  right: 18px;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(102, 197, 255, 0.22);
+  border-radius: 50%;
+  transform: rotate(-28deg) scaleY(0.5);
+}
+
+.catalog-card-orbit span {
+  position: absolute;
+  top: 50%;
+  left: -3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8ddcff;
+  box-shadow: 0 0 13px #58c9ff;
+}
+
+.catalog-card h2 {
+  max-width: 80%;
+  margin: 11px 0 13px;
+  color: #eef7ff;
+  font-size: 1.55rem;
+  font-weight: 560;
+  letter-spacing: -0.04em;
+}
+
+.catalog-card > p:not(.catalog-field, .catalog-model) {
+  max-width: 38ch;
+  margin: 0;
+  color: #889db2;
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+.catalog-model {
+  margin: auto 0 17px;
+  padding-top: 24px;
+  color: #637b91;
+  font-size: 0.61rem;
+  line-height: 1.5;
+}
+
+.catalog-card a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid rgba(147, 202, 255, 0.1);
+  color: #8fd5ff;
+  font-size: 0.68rem;
+  font-weight: 680;
+  text-decoration: none;
+}
+
+.catalog-card[data-status="research"] a {
+  color: #788ea3;
+}
+
+.catalog-note {
+  width: min(1180px, calc(100% - 40px));
+  margin: 20px auto 0;
+  padding-bottom: 48px;
+  color: #566a7e;
+  font-size: 0.64rem;
+  line-height: 1.6;
+}
+
+.research-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.research-card {
+  align-self: center;
+  width: min(900px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: clamp(30px, 5vw, 64px);
+  border: 1px solid rgba(147, 202, 255, 0.13);
+  border-radius: 24px;
+  background: rgba(5, 13, 23, 0.72);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+}
+
+.research-card h1 {
+  font-size: clamp(2.7rem, 7vw, 5.8rem);
+}
+
+.research-card dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 30px 0 20px;
+}
+
+.research-card dl > div {
+  padding: 16px;
+  border: 1px solid rgba(147, 202, 255, 0.1);
+  border-radius: 13px;
+  background: rgba(18, 38, 55, 0.24);
+}
+
+.research-card dt {
+  margin-bottom: 7px;
+  color: #657b91;
+  font-size: 0.58rem;
+  font-weight: 720;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.research-card dd {
+  margin: 0;
+  color: #c9dced;
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.research-card .research-warning {
+  max-width: none;
+  padding-top: 18px;
+  border-top: 1px solid rgba(147, 202, 255, 0.1);
+  color: #72889d;
+  font-size: 0.68rem;
+}
+
+@media (max-width: 760px) {
+  .catalog-header {
+    min-height: 60px;
+    padding: 0 14px;
+  }
+
+  .catalog-brand > span:last-child {
+    display: none;
+  }
+
+  .catalog-hero {
+    padding-top: 64px;
+  }
+
+  .catalog-hero h1 {
+    font-size: clamp(2.75rem, 14vw, 4.5rem);
+  }
+
+  .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .catalog-card,
+  .catalog-card:nth-child(n + 4) {
+    min-height: 275px;
+    grid-column: auto;
+  }
+
+  .research-card dl {
+    grid-template-columns: 1fr;
+  }
+}
