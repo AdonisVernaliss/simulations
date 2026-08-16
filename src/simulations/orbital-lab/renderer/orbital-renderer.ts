@@ -157,6 +157,7 @@ export class OrbitalRenderer {
   private quality: QualityLevel = 'balanced';
   private bodies: readonly BodyMetadata[] = [];
   private bodyVisuals: CelestialBodyVisual[] = [];
+  private compactVisuals: CelestialBodyVisual[] = [];
   private trails: BodyTrail[] = [];
   private velocityVectors: LineSegments | undefined;
   private previousPositions = new Float32Array();
@@ -250,6 +251,9 @@ export class OrbitalRenderer {
       this.compactObjectOverlay.add(visual.overlay);
       return visual;
     });
+    this.compactVisuals = this.bodyVisuals.filter(
+      (visual) => visual.body.kind === 'black-hole',
+    );
 
     const sampleInterval = Math.max(trailSpan / TRAIL_POINT_CAPACITY, 0.002);
     this.trails = bodies.map((body) => {
@@ -310,7 +314,15 @@ export class OrbitalRenderer {
       this.selectionRing.lookAt(this.camera.position);
     }
     this.controls.update();
-    this.bodyVisuals.forEach((visual) => visual.faceCamera(this.camera.position));
+    if (this.compactVisuals.length === 0) {
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
+
+    this.compactVisuals.forEach((visual) => {
+      visual.animate(elapsedSeconds);
+      visual.faceCamera(this.camera.position);
+    });
     this.composer.render();
     this.renderer.autoClear = false;
     this.renderer.clearDepth();
@@ -430,6 +442,7 @@ export class OrbitalRenderer {
       visual.dispose();
     }
     this.bodyVisuals = [];
+    this.compactVisuals = [];
 
     for (const trail of this.trails) {
       this.scene.remove(trail.line);
