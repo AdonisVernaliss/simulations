@@ -31,6 +31,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 
 import type { BodyMetadata } from '../worker-protocol';
+import { calculateTidalStressRatio } from '../model/tidal-stress';
 import {
   CelestialBodyVisual,
   CelestialMaterialLibrary,
@@ -298,6 +299,7 @@ export class OrbitalRenderer {
     }
 
     this.updateSelectionRing(positions);
+    this.updateTidalDeformation(positions);
     this.gravityField.update(positions);
     this.lensing.update(this.bodies, positions, this.camera, this.quality);
 
@@ -620,6 +622,57 @@ export class OrbitalRenderer {
       }
     }
     return primaryBodyIndex;
+  }
+
+  private updateTidalDeformation(positions: Float32Array): void {
+    for (let bodyIndex = 0; bodyIndex < this.bodies.length; bodyIndex += 1) {
+      const body = this.bodies[bodyIndex];
+      const visual = this.bodyVisuals[bodyIndex];
+      if (body === undefined || visual === undefined || body.kind === 'black-hole') {
+        continue;
+      }
+
+      const bodyOffset = bodyIndex * 3;
+      let strongestRatio = 0;
+      let strongestX = 0;
+      let strongestY = 0;
+      let strongestZ = 0;
+
+      for (let sourceIndex = 0; sourceIndex < this.bodies.length; sourceIndex += 1) {
+        const source = this.bodies[sourceIndex];
+        if (source?.kind !== 'black-hole') {
+          continue;
+        }
+
+        const sourceOffset = sourceIndex * 3;
+        const directionX = (positions[sourceOffset] ?? 0) - (positions[bodyOffset] ?? 0);
+        const directionY =
+          (positions[sourceOffset + 1] ?? 0) - (positions[bodyOffset + 1] ?? 0);
+        const directionZ =
+          (positions[sourceOffset + 2] ?? 0) - (positions[bodyOffset + 2] ?? 0);
+        const separation = Math.hypot(directionX, directionY, directionZ);
+        const stressRatio = calculateTidalStressRatio(
+          source.mass,
+          body.mass,
+          body.radius,
+          separation,
+        );
+
+        if (stressRatio > strongestRatio) {
+          strongestRatio = stressRatio;
+          strongestX = directionX;
+          strongestY = directionY;
+          strongestZ = directionZ;
+        }
+      }
+
+      visual.setTidalDeformation(
+        strongestX,
+        strongestY,
+        strongestZ,
+        strongestRatio,
+      );
+    }
   }
 
   private readonly handlePointerDown = (event: PointerEvent): void => {

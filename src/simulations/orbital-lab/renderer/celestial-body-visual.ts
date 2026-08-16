@@ -420,6 +420,8 @@ export class CelestialBodyVisual {
   readonly pickMesh: Mesh<SphereGeometry, Material>;
 
   private readonly oriented = new Group();
+  private readonly tidalFrame = new Group();
+  private readonly tidalDirection = new Vector3();
   private readonly surfaceMaterial: Material;
   private readonly atmosphereMaterial: MeshBasicMaterial | undefined;
   private readonly ringMaterial: Material | undefined;
@@ -449,7 +451,8 @@ export class CelestialBodyVisual {
     this.pickMesh.scale.y = body.kind === 'gas-giant' ? 0.94 : body.kind === 'ice-giant' ? 0.97 : 1;
     this.oriented.rotation.x = Math.PI / 2 - body.axialTilt;
     this.oriented.add(this.pickMesh);
-    this.root.add(this.oriented);
+    this.tidalFrame.add(this.oriented);
+    this.root.add(this.tidalFrame);
     this.root.scale.setScalar(body.renderRadius);
     this.overlay.scale.setScalar(body.renderRadius);
 
@@ -585,6 +588,33 @@ export class CelestialBodyVisual {
     this.blackHoleDisk.material.uniforms.uVisualTime!.value = this.visualTime;
   }
 
+  setTidalDeformation(
+    directionX: number,
+    directionY: number,
+    directionZ: number,
+    stressRatio: number,
+  ): void {
+    if (this.body.kind === 'black-hole' || stressRatio < 0.015) {
+      this.tidalFrame.quaternion.identity();
+      this.tidalFrame.scale.set(1, 1, 1);
+      return;
+    }
+
+    this.tidalDirection.set(directionX, directionY, directionZ);
+    if (this.tidalDirection.lengthSq() <= Number.EPSILON) {
+      return;
+    }
+
+    this.tidalDirection.normalize();
+    this.tidalFrame.quaternion.setFromUnitVectors(
+      CelestialBodyVisual.TIDAL_AXIS,
+      this.tidalDirection,
+    );
+    const stretch = 1 + Math.min(7, (stressRatio - 0.015) * 3.6);
+    const transverse = 1 / Math.sqrt(stretch);
+    this.tidalFrame.scale.set(stretch, transverse, transverse);
+  }
+
   setQuality(quality: QualityLevel): void {
     if (this.quality === quality) {
       return;
@@ -641,6 +671,8 @@ export class CelestialBodyVisual {
     const detail = GEOMETRY_DETAIL[this.quality];
     return new SphereGeometry(1, detail.widthSegments, detail.heightSegments);
   }
+
+  private static readonly TIDAL_AXIS = new Vector3(1, 0, 0);
 
   private createRingGeometry(innerRadius: number, outerRadius: number): RingGeometry {
     return new RingGeometry(innerRadius, outerRadius, GEOMETRY_DETAIL[this.quality].ringSegments);
