@@ -548,7 +548,14 @@ export class NBodySimulation {
     const availableSlots =
       MAXIMUM_INTERACTIVE_BODIES - (this.count - 2) - 1;
     const debrisCount = Math.max(1, Math.min(8, availableSlots));
-    const debrisMass = (totalMass - largestMass) / debrisCount;
+    const debrisWeights = Array.from(
+      { length: debrisCount },
+      (_, fragmentIndex) => 1 / (fragmentIndex + 1) ** 0.72,
+    );
+    const debrisWeightTotal = debrisWeights.reduce((sum, weight) => sum + weight, 0);
+    const debrisMasses = debrisWeights.map(
+      (weight) => ((totalMass - largestMass) * weight) / debrisWeightTotal,
+    );
     const combinedRadius = Math.cbrt(
       this.radiusData[firstIndex]! ** 3 + this.radiusData[secondIndex]! ** 3,
     );
@@ -557,6 +564,51 @@ export class NBodySimulation {
     );
     const dominantIndex = firstMass >= secondMass ? firstIndex : secondIndex;
     const eventSequence = this.collisionSequence + 1;
+    const ejectionSpeed = Math.max(
+      analysis.mutualEscapeSpeed * 0.32,
+      analysis.impactSpeed * 0.12,
+    );
+    const separation = combinedRadius * 3.2;
+    const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+    const fragments = debrisMasses.map((mass, fragmentIndex) => {
+      const variation =
+        Math.sin((fragmentIndex + 1) * 91.733 + eventSequence * 17.17) * 43_758.5453;
+      const random = variation - Math.floor(variation);
+      const angle = fragmentIndex * goldenAngle + random * 0.42;
+      const rawDirection: Vector3Tuple = [
+        Math.cos(angle),
+        Math.sin(angle),
+        Math.sin(angle * 1.73 + 0.4) * 0.28,
+      ];
+      const directionLength = Math.hypot(...rawDirection);
+      const direction = rawDirection.map(
+        (component) => component / directionLength,
+      ) as unknown as Vector3Tuple;
+      const radialScale = 0.78 + random * 0.62;
+      const speedScale = 0.72 + random * 0.58;
+      return {
+        mass,
+        angle,
+        offset: direction.map(
+          (component) => component * separation * radialScale,
+        ) as unknown as Vector3Tuple,
+        ejection: direction.map(
+          (component) => component * ejectionSpeed * speedScale,
+        ) as unknown as Vector3Tuple,
+      };
+    });
+    const meanOffset = [0, 0, 0];
+    const meanEjection = [0, 0, 0];
+
+    for (const fragment of fragments) {
+      for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
+        meanOffset[component] =
+          meanOffset[component]! + fragment.offset[component]! * fragment.mass / totalMass;
+        meanEjection[component] =
+          meanEjection[component]! + fragment.ejection[component]! * fragment.mass / totalMass;
+      }
+    }
+
     const remnants: BodyDefinition[] = [
       {
         id: `remnant-${eventSequence}`,
@@ -569,61 +621,44 @@ export class NBodySimulation {
         color: this.colorsData[dominantIndex]!,
         axialTilt: this.axialTiltData[dominantIndex]!,
         rotationRate: this.rotationRateData[dominantIndex]!,
-        position: [centerPosition[0]!, centerPosition[1]!, centerPosition[2]!],
-        velocity: [centerVelocity[0]!, centerVelocity[1]!, centerVelocity[2]!],
-      },
-    ];
-    const fragmentFraction = debrisMass / totalMass;
-    const ejectionSpeed = Math.max(
-      analysis.mutualEscapeSpeed * 0.32,
-      analysis.impactSpeed * 0.12,
-    );
-    const separation = combinedRadius * 3.2;
-
-    if (debrisCount === 1) {
-      const recoilScale = debrisMass / largestMass;
-      remnants[0] = {
-        ...remnants[0]!,
         position: [
-          centerPosition[0]! - separation * recoilScale,
-          centerPosition[1]!,
-          centerPosition[2]!,
+          centerPosition[0]! - meanOffset[0]!,
+          centerPosition[1]! - meanOffset[1]!,
+          centerPosition[2]! - meanOffset[2]!,
         ],
         velocity: [
-          centerVelocity[0]! - ejectionSpeed * recoilScale,
-          centerVelocity[1]!,
-          centerVelocity[2]!,
+          centerVelocity[0]! - meanEjection[0]!,
+          centerVelocity[1]! - meanEjection[1]!,
+          centerVelocity[2]! - meanEjection[2]!,
         ],
-      };
-    }
+      },
+    ];
 
-    for (let fragmentIndex = 0; fragmentIndex < debrisCount; fragmentIndex += 1) {
-      const angle = (fragmentIndex / debrisCount) * Math.PI * 2;
-      const directionX = Math.cos(angle);
-      const directionY = Math.sin(angle);
+    fragments.forEach((fragment, fragmentIndex) => {
+      const fragmentFraction = fragment.mass / totalMass;
       remnants.push({
         id: `fragment-${eventSequence}-${fragmentIndex + 1}`,
         name: `Fragment ${fragmentIndex + 1}`,
         kind: 'rocky',
         surface: 'procedural',
-        mass: debrisMass,
+        mass: fragment.mass,
         radius: combinedRadius * Math.cbrt(fragmentFraction),
         renderRadius: combinedRenderRadius * Math.cbrt(fragmentFraction) * 0.82,
-        color: this.colorsData[dominantIndex]!,
-        axialTilt: angle,
+        color: this.colorsData[fragmentIndex % 2 === 0 ? firstIndex : secondIndex]!,
+        axialTilt: fragment.angle,
         rotationRate: (fragmentIndex % 2 === 0 ? 1 : -1) * (2.4 + fragmentIndex * 0.31),
         position: [
-          centerPosition[0]! + directionX * separation,
-          centerPosition[1]! + directionY * separation,
-          centerPosition[2]!,
+          centerPosition[0]! + fragment.offset[0] - meanOffset[0]!,
+          centerPosition[1]! + fragment.offset[1] - meanOffset[1]!,
+          centerPosition[2]! + fragment.offset[2] - meanOffset[2]!,
         ],
         velocity: [
-          centerVelocity[0]! + directionX * ejectionSpeed,
-          centerVelocity[1]! + directionY * ejectionSpeed,
-          centerVelocity[2]!,
+          centerVelocity[0]! + fragment.ejection[0] - meanEjection[0]!,
+          centerVelocity[1]! + fragment.ejection[1] - meanEjection[1]!,
+          centerVelocity[2]! + fragment.ejection[2] - meanEjection[2]!,
         ],
       });
-    }
+    });
 
     const bodies = this.createBodyDefinitions().filter(
       (_, bodyIndex) => bodyIndex !== firstIndex && bodyIndex !== secondIndex,

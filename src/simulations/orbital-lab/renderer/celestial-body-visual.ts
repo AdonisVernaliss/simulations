@@ -367,7 +367,7 @@ export class CelestialBodyVisual {
           toneMapped: false,
         }),
       );
-      glow.scale.set(6.2, 6.2, 1);
+      glow.scale.set(3.6, 3.6, 1);
       glow.renderOrder = -1;
       this.root.add(glow);
     }

@@ -152,6 +152,7 @@ export class OrbitalRenderer {
   private readonly materialLibrary: CelestialMaterialLibrary;
   private readonly selectionRing: Mesh<RingGeometry, MeshBasicMaterial>;
   private readonly primaryLight = new PointLight(0xffffff, 34, 0, 1.5);
+  private readonly ambientLight = new AmbientLight(0x7390ad, 0.32);
   private quality: QualityLevel = 'balanced';
   private bodies: readonly BodyMetadata[] = [];
   private bodyVisuals: CelestialBodyVisual[] = [];
@@ -208,7 +209,7 @@ export class OrbitalRenderer {
     this.selectionRing = this.createSelectionRing();
     this.scene.add(this.starField);
     this.scene.add(this.gravityField.mesh);
-    this.scene.add(new AmbientLight(0x7390ad, 0.32));
+    this.scene.add(this.ambientLight);
     this.scene.add(this.primaryLight);
     this.scene.add(this.selectionRing);
 
@@ -284,6 +285,7 @@ export class OrbitalRenderer {
 
     const primaryBodyIndex = this.getPrimaryLuminousBodyIndex();
     this.primaryLight.visible = primaryBodyIndex !== undefined;
+    this.ambientLight.intensity = primaryBodyIndex === undefined ? 1.15 : 0.32;
     if (primaryBodyIndex !== undefined) {
       this.primaryLight.position.fromArray(positions, primaryBodyIndex * 3);
       this.primaryLight.color.set(this.bodies[primaryBodyIndex]?.color ?? 0xffffff);
@@ -491,7 +493,7 @@ export class OrbitalRenderer {
     const material = new MeshBasicMaterial({
       color: 0x78d9ff,
       transparent: true,
-      opacity: 0.72,
+      opacity: 0.48,
       side: DoubleSide,
       depthWrite: false,
       blending: AdditiveBlending,
@@ -536,8 +538,11 @@ export class OrbitalRenderer {
     }
 
     this.selectionRing.position.fromArray(positions, offset);
+    const isFollowingSelection = this.followedBodyIndex === this.selectedBodyIndex;
     this.selectionRing.scale.setScalar(
-      Math.max(body.renderRadius, this.systemCameraDistance * 0.0045),
+      isFollowingSelection
+        ? body.renderRadius * 1.08
+        : Math.max(body.renderRadius, this.systemCameraDistance * 0.0045),
     );
   }
 
