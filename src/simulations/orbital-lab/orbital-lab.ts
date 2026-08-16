@@ -135,6 +135,11 @@ const formatDuration = (seconds: number): string => {
   return `${formatNumber(seconds / 31_557_600, 3)} yr`;
 };
 
+const getInitialPresetId = (): string => {
+  const requested = new URLSearchParams(window.location.search).get('preset');
+  return presets.some((preset) => preset.id === requested) ? requested! : presets[0].id;
+};
+
 export class OrbitalLab {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: OrbitalRenderer;
@@ -184,8 +189,8 @@ export class OrbitalLab {
   private lastMetricsUpdate = 0;
   private framesPerSecond = 60;
   private initialEnergy = 0;
-  private activePresetId: string = presets[0].id;
-  private currentTimeWarp: number = presets[0].defaultTimeWarp;
+  private activePresetId: string = getInitialPresetId();
+  private currentTimeWarp: number = getPreset(this.activePresetId).defaultTimeWarp;
   private paused = false;
   private qualityMode: QualityMode = 'auto';
   private activeQuality: QualityLevel = 'balanced';

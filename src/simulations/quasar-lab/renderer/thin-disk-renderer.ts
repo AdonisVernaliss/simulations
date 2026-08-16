@@ -9,6 +9,8 @@ import {
 const OUTER_DISPLAY_RADIUS_RG = 140;
 const EVENT_HORIZON_RADIUS_RG = 2;
 
+export type QuasarRegion = 'black-hole' | 'accretion-disk';
+
 interface ColourStop {
   readonly position: number;
   readonly red: number;
@@ -49,8 +51,14 @@ export class ThinDiskRenderer {
   private animationFrame = 0;
   private lastTimestamp = 0;
   private phase = 0;
+  private selectedRegion: QuasarRegion = 'black-hole';
+  private pointerDownX = 0;
+  private pointerDownY = 0;
 
-  constructor(private readonly canvas: HTMLCanvasElement) {
+  constructor(
+    private readonly canvas: HTMLCanvasElement,
+    private readonly onRegionSelected: (region: QuasarRegion) => void = () => {},
+  ) {
     const context = canvas.getContext('2d');
     if (context === null) {
       throw new Error('A two-dimensional canvas context is required.');
@@ -65,6 +73,8 @@ export class ThinDiskRenderer {
     this.staticContext = staticContext;
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas.parentElement ?? canvas);
+    this.canvas.addEventListener('pointerdown', this.handlePointerDown);
+    this.canvas.addEventListener('pointerup', this.handlePointerUp);
     this.resize();
   }
 
@@ -87,6 +97,8 @@ export class ThinDiskRenderer {
     cancelAnimationFrame(this.animationFrame);
     this.animationFrame = 0;
     this.resizeObserver.disconnect();
+    this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
+    this.canvas.removeEventListener('pointerup', this.handlePointerUp);
   }
 
   private readonly render = (timestamp: number): void => {
@@ -149,6 +161,7 @@ export class ThinDiskRenderer {
     this.context.clearRect(0, 0, width, height);
     this.context.drawImage(this.staticCanvas, 0, 0, width, height);
     this.drawOrbitalTracers(centerX, centerY, outerRadius, verticalScale);
+    this.drawSelection(centerX, centerY, outerRadius, verticalScale);
   }
 
   private drawStars(width: number, height: number): void {
@@ -178,11 +191,6 @@ export class ThinDiskRenderer {
     verticalScale: number,
   ): void {
     const profile = createDiskProfile(this.solarMasses, this.eddingtonRatio, 240, OUTER_DISPLAY_RADIUS_RG);
-    const peakTemperature = getPeakDiskTemperature(
-      this.solarMasses,
-      getAccretionRate(this.solarMasses, this.eddingtonRatio),
-    );
-
     const context = this.staticContext;
     context.save();
     context.globalCompositeOperation = 'lighter';
@@ -194,12 +202,9 @@ export class ThinDiskRenderer {
       }
       const radius = this.toDisplayRadius(annulus.radiusRg, outerRadius);
       const previousRadius = this.toDisplayRadius(previous.radiusRg, outerRadius);
-      const temperatureFraction = clamp(
-        (Math.log10(annulus.temperature / peakTemperature) + 1.32) / 1.32,
-        0,
-        1,
-      );
-      const alpha = 0.48 + temperatureFraction * 0.42;
+      const temperatureFraction = clamp((Math.log10(annulus.temperature) - 3.35) / 2.15, 0, 1);
+      const luminosityGain = 0.48 + 0.52 * Math.sqrt(this.eddingtonRatio);
+      const alpha = (0.34 + temperatureFraction * 0.6) * luminosityGain;
       context.strokeStyle = interpolateColour(temperatureFraction, alpha);
       context.lineWidth = Math.max((radius - previousRadius) * 1.75, 1.25);
       context.shadowColor = interpolateColour(temperatureFraction, 0.52);
@@ -277,13 +282,14 @@ export class ThinDiskRenderer {
       getAccretionRate(this.solarMasses, this.eddingtonRatio),
     );
     const accretionRate = getAccretionRate(this.solarMasses, this.eddingtonRatio);
+    const massRate = (this.solarMasses / 10 ** 8.5) ** -1;
 
     this.context.save();
     this.context.globalCompositeOperation = 'lighter';
     radii.forEach((radiusRg, index) => {
       const displayRadius = this.toDisplayRadius(radiusRg, outerRadius);
       const angularRate = (8.3 / radiusRg) ** 1.5;
-      const angle = index * 2.399_963 + this.phase * angularRate;
+      const angle = index * 2.399_963 + this.phase * angularRate * massRate;
       const temperature = getDiskTemperature(this.solarMasses, accretionRate, radiusRg);
       const temperatureFraction = clamp(
         (Math.log10(temperature / peakTemperature) + 1.32) / 1.32,
@@ -306,4 +312,60 @@ export class ThinDiskRenderer {
   private toDisplayRadius(radiusRg: number, outerRadius: number): number {
     return Math.sqrt(radiusRg / OUTER_DISPLAY_RADIUS_RG) * outerRadius;
   }
+
+  private drawSelection(
+    centerX: number,
+    centerY: number,
+    outerRadius: number,
+    verticalScale: number,
+  ): void {
+    this.context.save();
+    this.context.strokeStyle = 'rgba(139, 220, 255, 0.68)';
+    this.context.shadowColor = 'rgba(95, 188, 255, 0.8)';
+    this.context.shadowBlur = 10;
+    this.context.lineWidth = 1;
+    this.context.setLineDash([4, 5]);
+    this.context.beginPath();
+    if (this.selectedRegion === 'black-hole') {
+      const horizonRadius = this.toDisplayRadius(EVENT_HORIZON_RADIUS_RG, outerRadius);
+      this.context.arc(centerX, centerY, horizonRadius * 1.55, 0, Math.PI * 2);
+    } else {
+      const innerRadius = this.toDisplayRadius(INNER_RADIUS_RG, outerRadius);
+      this.context.ellipse(centerX, centerY, innerRadius * 1.08, innerRadius * verticalScale * 1.08, 0, 0, Math.PI * 2);
+    }
+    this.context.stroke();
+    this.context.restore();
+  }
+
+  private readonly handlePointerDown = (event: PointerEvent): void => {
+    this.pointerDownX = event.clientX;
+    this.pointerDownY = event.clientY;
+  };
+
+  private readonly handlePointerUp = (event: PointerEvent): void => {
+    if (Math.hypot(event.clientX - this.pointerDownX, event.clientY - this.pointerDownY) > 6) {
+      return;
+    }
+    const bounds = this.canvas.getBoundingClientRect();
+    const { centerX, centerY, outerRadius, verticalScale } = this.getGeometry();
+    const x = event.clientX - bounds.left - centerX;
+    const y = event.clientY - bounds.top - centerY;
+    const circularRadius = Math.hypot(x, y);
+    const horizonRadius = this.toDisplayRadius(EVENT_HORIZON_RADIUS_RG, outerRadius);
+    const diskRadius = Math.hypot(x / outerRadius, y / (outerRadius * verticalScale));
+    let region: QuasarRegion | undefined;
+
+    if (circularRadius <= horizonRadius * 1.9) {
+      region = 'black-hole';
+    } else if (diskRadius <= 1.08) {
+      region = 'accretion-disk';
+    }
+
+    if (region !== undefined) {
+      this.selectedRegion = region;
+      this.canvas.dataset.selection = region;
+      this.onRegionSelected(region);
+      this.present();
+    }
+  };
 }

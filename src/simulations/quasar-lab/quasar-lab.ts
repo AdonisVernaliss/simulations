@@ -11,7 +11,10 @@ import {
   getPeakDiskTemperature,
   getWienPeakWavelength,
 } from './model/thin-disk';
-import { ThinDiskRenderer } from './renderer/thin-disk-renderer';
+import {
+  ThinDiskRenderer,
+  type QuasarRegion,
+} from './renderer/thin-disk-renderer';
 
 const ASTRONOMICAL_UNIT_METRES = 149_597_870_700;
 
@@ -108,6 +111,8 @@ export class QuasarLab {
   private readonly experimentTitle: HTMLElement;
   private readonly experimentObservation: HTMLElement;
   private readonly experimentButtons: readonly HTMLButtonElement[];
+  private readonly selectedRegionName: HTMLElement;
+  private readonly selectedRegionDescription: HTMLElement;
 
   constructor(root: HTMLElement) {
     root.innerHTML = this.createMarkup();
@@ -124,14 +129,18 @@ export class QuasarLab {
     this.experimentTitle = requireElement(root, '[data-experiment-title]');
     this.experimentObservation = requireElement(root, '[data-experiment-observation]');
     this.experimentButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-experiment]')];
+    this.selectedRegionName = requireElement(root, '[data-selected-region]');
+    this.selectedRegionDescription = requireElement(root, '[data-selected-region-description]');
     this.renderer = new ThinDiskRenderer(
       requireElement<HTMLCanvasElement>(root, '[data-thin-disk-canvas]'),
+      (region) => this.selectRegion(region),
     );
     this.bindControls(root);
   }
 
   start(): void {
     this.activateExperiment('reference');
+    this.selectRegion('black-hole');
     this.renderer.start();
   }
 
@@ -196,6 +205,22 @@ export class QuasarLab {
     this.periodValue.textContent = formatDuration(orbitalPeriod);
   }
 
+  private selectRegion(region: QuasarRegion): void {
+    const descriptions: Record<QuasarRegion, readonly [string, string]> = {
+      'black-hole': [
+        'Central black hole',
+        'The compact mass supplies the gravitational field. The dark centre is an observable shadow; the event horizon lies inside it.',
+      ],
+      'accretion-disk': [
+        'Thermal accretion disk',
+        'Orbiting gas dissipates energy and radiates locally. It is luminous matter around the black hole, not part of the horizon.',
+      ],
+    };
+    const [name, description] = descriptions[region];
+    this.selectedRegionName.textContent = name;
+    this.selectedRegionDescription.textContent = description;
+  }
+
   private createMarkup(): string {
     return `
       <article class="quasar-shell">
@@ -234,6 +259,11 @@ export class QuasarLab {
           <aside class="disk-panel" aria-label="Accretion disk properties">
             <p class="quasar-eyebrow">Model output</p>
             <strong>Thermal thin disk</strong>
+            <div class="quasar-object-selection">
+              <span>Selected component</span>
+              <strong data-selected-region>Central black hole</strong>
+              <p data-selected-region-description>—</p>
+            </div>
             <div class="disk-observation">
               <span>Current experiment</span>
               <strong data-experiment-title>—</strong>
@@ -247,10 +277,13 @@ export class QuasarLab {
               <div><dt>Inner edge · 6r<sub>g</sub></dt><dd data-inner-radius>—</dd></div>
               <div><dt>Orbit at hottest annulus</dt><dd data-orbital-period>—</dd></div>
             </dl>
-            <p>
+            <p class="disk-assumption">
               Zero torque at 6r<sub>g</sub>; η = ${THIN_DISK_EFFICIENCY.toFixed(4)}. The Wien value
               belongs to the hottest local annulus, not the integrated spectrum.
             </p>
+            <a class="quasar-system-link" href="?lab=orbital&amp;preset=quasar-system">
+              Open live gravity scene · add objects
+            </a>
           </aside>
 
           <div class="disk-dock" aria-label="Accretion disk controls">
