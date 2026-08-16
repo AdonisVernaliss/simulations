@@ -8,7 +8,6 @@ import {
   Color,
   DoubleSide,
   DynamicDrawUsage,
-  Group,
   Line,
   LineBasicMaterial,
   LineSegments,
@@ -16,13 +15,9 @@ import {
   MeshBasicMaterial,
   PerspectiveCamera,
   PointLight,
-  Points,
-  PointsMaterial,
   Raycaster,
   RingGeometry,
   Scene,
-  Sprite,
-  SpriteMaterial,
   SRGBColorSpace,
   Vector2,
   Vector3,
@@ -41,6 +36,7 @@ import {
 } from './celestial-body-visual';
 import { GravitationalLensing } from './gravitational-lensing';
 import { GravityFieldVisual } from './gravity-field-visual';
+import { SkyEnvironment } from './sky-environment';
 
 export type QualityLevel = 'low' | 'balanced' | 'high';
 
@@ -51,17 +47,15 @@ export interface BodySelection {
 
 interface QualityProfile {
   readonly maximumPixelRatio: number;
-  readonly starCount: number;
   readonly exposure: number;
 }
 
 const QUALITY_PROFILES: Record<QualityLevel, QualityProfile> = {
-  low: { maximumPixelRatio: 1, starCount: 1_200, exposure: 1.08 },
-  balanced: { maximumPixelRatio: 1.5, starCount: 2_800, exposure: 1.15 },
-  high: { maximumPixelRatio: 2, starCount: 6_000, exposure: 1.2 },
+  low: { maximumPixelRatio: 1, exposure: 1.08 },
+  balanced: { maximumPixelRatio: 1.5, exposure: 1.15 },
+  high: { maximumPixelRatio: 2, exposure: 1.2 },
 };
 
-const MAXIMUM_STARS = QUALITY_PROFILES.high.starCount;
 const TRAIL_POINT_CAPACITY = 520;
 
 class BodyTrail {
@@ -152,8 +146,7 @@ export class OrbitalRenderer {
   private readonly pointer = new Vector2();
   private readonly focusTarget = new Vector3();
   private readonly focusDirection = new Vector3();
-  private readonly starField: Points;
-  private readonly distantSystem: Group;
+  private readonly skyEnvironment: SkyEnvironment;
   private readonly glowTexture: CanvasTexture;
   private readonly materialLibrary: CelestialMaterialLibrary;
   private readonly selectionRing: Mesh<RingGeometry, MeshBasicMaterial>;
@@ -192,9 +185,9 @@ export class OrbitalRenderer {
     this.renderer.outputColorSpace = SRGBColorSpace;
     this.renderer.toneMapping = ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.12;
-    this.materialLibrary = new CelestialMaterialLibrary(
-      this.renderer.capabilities.getMaxAnisotropy(),
-    );
+    const maximumAnisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    this.materialLibrary = new CelestialMaterialLibrary(maximumAnisotropy);
+    this.skyEnvironment = new SkyEnvironment(maximumAnisotropy);
     this.composer = new EffectComposer(this.renderer);
     this.scenePass = new RenderPass(this.scene, this.camera);
     this.outputPass = new OutputPass();
@@ -212,11 +205,8 @@ export class OrbitalRenderer {
     this.controls.target.set(0, 0, 0);
 
     this.glowTexture = this.createGlowTexture();
-    this.starField = this.createStarField();
-    this.distantSystem = this.createDistantSystem();
     this.selectionRing = this.createSelectionRing();
-    this.scene.add(this.starField);
-    this.scene.add(this.distantSystem);
+    this.scene.add(this.skyEnvironment.mesh);
     this.scene.add(this.gravityField.mesh);
     this.scene.add(this.ambientLight);
     this.scene.add(this.primaryLight);
@@ -318,6 +308,7 @@ export class OrbitalRenderer {
     const elapsedSeconds = Math.min((now - this.previousRenderTime) / 1_000, 0.25);
     this.previousRenderTime = now;
     this.animateFocus(elapsedSeconds);
+    this.skyEnvironment.update(this.camera.position);
     if (this.selectionRing.visible) {
       this.selectionRing.lookAt(this.camera.position);
     }
@@ -344,7 +335,7 @@ export class OrbitalRenderer {
     const devicePixelRatio = window.devicePixelRatio || 1;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, profile.maximumPixelRatio));
     this.renderer.toneMappingExposure = profile.exposure;
-    this.starField.geometry.setDrawRange(0, profile.starCount);
+    this.skyEnvironment.setQuality(quality);
     this.materialLibrary.setQuality(quality);
     this.bodyVisuals.forEach((visual) => visual.setQuality(quality));
     this.gravityField.setQuality(quality);
@@ -418,20 +409,7 @@ export class OrbitalRenderer {
     this.canvas.removeEventListener('pointerup', this.handlePointerUp);
     this.controls.dispose();
     this.disposeBodies();
-    this.starField.geometry.dispose();
-    (this.starField.material as PointsMaterial).dispose();
-    this.distantSystem.traverse((child) => {
-      if (child instanceof Mesh) {
-        child.geometry.dispose();
-        if (Array.isArray(child.material)) {
-          child.material.forEach((material) => material.dispose());
-        } else {
-          child.material.dispose();
-        }
-      } else if (child instanceof Sprite) {
-        child.material.dispose();
-      }
-    });
+    this.skyEnvironment.dispose();
     this.selectionRing.geometry.dispose();
     this.selectionRing.material.dispose();
     this.glowTexture.dispose();
@@ -480,127 +458,6 @@ export class OrbitalRenderer {
 
     this.previousPositions = new Float32Array();
     this.previousTime = 0;
-  }
-
-  private createStarField(): Points {
-    const positions = new Float32Array(MAXIMUM_STARS * 3);
-    const colors = new Float32Array(MAXIMUM_STARS * 3);
-    let seed = 0x4f726269;
-
-    const random = (): number => {
-      seed ^= seed << 13;
-      seed ^= seed >>> 17;
-      seed ^= seed << 5;
-      return (seed >>> 0) / 4_294_967_296;
-    };
-
-    for (let index = 0; index < MAXIMUM_STARS; index += 1) {
-      const inGalacticCore = index < MAXIMUM_STARS * 0.14;
-      const longitude = inGalacticCore
-        ? 5.18 + (random() + random() + random() - 1.5) * 0.48
-        : random() * Math.PI * 2;
-      const isGalacticBand = index < MAXIMUM_STARS * 0.62;
-      const zDistribution = isGalacticBand
-        ? Math.max(
-            -1,
-            Math.min(
-              1,
-              (random() + random() + random() - 1.5) *
-                (inGalacticCore ? 0.24 : 0.34),
-            ),
-          )
-        : 2 * random() - 1;
-      const latitude = Math.acos(zDistribution);
-      const radius = 68 + random() * 24;
-      const offset = index * 3;
-      positions[offset] = radius * Math.sin(latitude) * Math.cos(longitude);
-      positions[offset + 1] = radius * Math.sin(latitude) * Math.sin(longitude);
-      positions[offset + 2] = radius * Math.cos(latitude);
-
-      const warmth = random();
-      this.color.set(warmth > 0.82 ? 0xffd3a1 : warmth < 0.2 ? 0xa9ccff : 0xe7f1ff);
-      this.color.multiplyScalar(
-        inGalacticCore ? 1.18 + random() * 0.42 : 0.94 + random() * 0.48,
-      );
-      this.color.toArray(colors, offset);
-    }
-
-    const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(positions, 3));
-    geometry.setAttribute('color', new BufferAttribute(colors, 3));
-    const material = new PointsMaterial({
-      vertexColors: true,
-      size: 0.52,
-      sizeAttenuation: true,
-      transparent: true,
-      opacity: 0.96,
-      depthWrite: false,
-      blending: AdditiveBlending,
-      toneMapped: false,
-    });
-
-    return new Points(geometry, material);
-  }
-
-  private createDistantSystem(): Group {
-    const system = new Group();
-    system.position.set(-48, 72, 28);
-    system.rotation.set(0.72, -0.28, 0.34);
-
-    const star = new Sprite(
-      new SpriteMaterial({
-        map: this.glowTexture,
-        color: 0xffd7a0,
-        transparent: true,
-        opacity: 0.9,
-        blending: AdditiveBlending,
-        depthWrite: false,
-        toneMapped: false,
-      }),
-    );
-    star.scale.set(2.3, 2.3, 1);
-    system.add(star);
-
-    const orbitDefinitions = [
-      { radius: 2.2, angle: 0.6, color: 0x81b9ff, size: 0.24 },
-      { radius: 3.45, angle: 3.85, color: 0xe1ae7b, size: 0.31 },
-      { radius: 5.1, angle: 5.22, color: 0x86d9ca, size: 0.2 },
-    ];
-
-    for (const definition of orbitDefinitions) {
-      const orbit = new Mesh(
-        new RingGeometry(definition.radius - 0.012, definition.radius + 0.012, 96),
-        new MeshBasicMaterial({
-          color: 0x8aa8bf,
-          transparent: true,
-          opacity: 0.15,
-          side: DoubleSide,
-          depthWrite: false,
-          toneMapped: false,
-        }),
-      );
-      system.add(orbit);
-
-      const planet = new Sprite(
-        new SpriteMaterial({
-          map: this.glowTexture,
-          color: definition.color,
-          transparent: true,
-          opacity: 0.86,
-          depthWrite: false,
-          toneMapped: false,
-        }),
-      );
-      planet.position.set(
-        Math.cos(definition.angle) * definition.radius,
-        Math.sin(definition.angle) * definition.radius,
-        0,
-      );
-      planet.scale.set(definition.size, definition.size, 1);
-      system.add(planet);
-    }
-
-    return system;
   }
 
   private createSelectionRing(): Mesh<RingGeometry, MeshBasicMaterial> {
