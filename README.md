@@ -2,6 +2,16 @@
 
 Interactive scientific simulations designed for real-time use in modern browsers. The project focuses on explicit physical assumptions, responsive controls, and predictable performance across desktop and mobile devices.
 
+## Laboratories
+
+The application uses stable query-based laboratory addresses that work on static hosting without server-side route rewrites:
+
+- `?lab=catalog` — laboratory catalog;
+- `?lab=orbital` — Orbital Mechanics Lab;
+- `?lab=atomic` — Atomic Orbitals Lab.
+
+Opening the root address without a query loads Orbital Mechanics Lab.
+
 ## Orbital Mechanics Lab
 
 The first simulation models gravitational systems with:
@@ -34,6 +44,18 @@ Preset positions and velocities are barycentric, so their initial center of mass
 The Solar System preset uses JPL-derived mass ratios and orbital scales, but deliberately uses circular, coplanar initial orbits. The model is educational rather than a source of astronomical ephemerides.
 
 See [Scientific basis](docs/scientific-basis.md) for the equations, source provenance, automated validation, limitations, and the acceptance policy for future biological models.
+
+## Atomic Orbitals Lab
+
+The second simulation models selected stationary states of the non-relativistic hydrogen atom with:
+
+- analytically normalized `1s`, `2s`, `2p`, `3p`, and `3d` wavefunctions;
+- probability clouds sampled from `|ψ|²`, never classical electron paths;
+- phase-sign colors, radial scale guides, quantum numbers, nodes, and model energy;
+- deterministic sampling and selectable point density;
+- orbit, zoom, rotation, and mobile-adaptive controls.
+
+See the [Atomic orbitals model card](docs/atomic-orbitals.md) for equations, constants, sampling details, sources, validation, and limitations.
 
 ## Performance design
 
@@ -92,13 +114,16 @@ npm run check
 
 ```text
 src/
-├── core/                         Fixed-step runtime utilities
-└── simulations/orbital-lab/
-    ├── model/                    Physics engine and presets
-    ├── renderer/                 WebGL scene and reusable buffers
-    ├── orbital-lab.ts            Interface controller
-    ├── simulation.worker.ts      Worker-side simulation loop
-    └── worker-protocol.ts        Typed worker messages
+├── core/                         Shared runtime utilities
+├── catalog.ts                    Laboratory index and research workspaces
+└── simulations/
+    ├── atomic-lab/               Hydrogen model, sampler, renderer, and interface
+    └── orbital-lab/
+        ├── model/                Physics engine and presets
+        ├── renderer/             WebGL scene and reusable buffers
+        ├── orbital-lab.ts        Interface controller
+        ├── simulation.worker.ts  Worker-side simulation loop
+        └── worker-protocol.ts    Typed worker messages
 tests/                            Numerical and runtime tests
 docs/                             Scientific model cards and sources
 ```
