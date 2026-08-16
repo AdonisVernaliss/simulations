@@ -10,6 +10,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
+  PlaneGeometry,
   RepeatWrapping,
   RingGeometry,
   ShaderMaterial,
@@ -108,33 +109,55 @@ const SUN_FRAGMENT_SHADER = `
   }
 `;
 
-const DISK_VERTEX_SHADER = `
-  varying vec2 vDiskPosition;
+const BLACK_HOLE_VERTEX_SHADER = `
+  varying vec2 vUvPosition;
 
   void main() {
-    vDiskPosition = position.xy;
+    vUvPosition = uv * 2.0 - 1.0;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
 `;
 
-const DISK_FRAGMENT_SHADER = `
+const BLACK_HOLE_FRAGMENT_SHADER = `
   uniform float uTime;
-  varying vec2 vDiskPosition;
+  varying vec2 vUvPosition;
 
   float hash(vec2 p) {
     return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
   }
 
   void main() {
-    float radius = length(vDiskPosition);
-    float angle = atan(vDiskPosition.y, vDiskPosition.x);
-    float bands = 0.72 + 0.28 * sin(radius * 42.0 - uTime * 2.2 + hash(floor(vDiskPosition * 22.0)) * 2.0);
-    float heat = smoothstep(2.45, 0.95, radius);
-    float approaching = 0.72 + 0.42 * cos(angle);
-    vec3 cool = vec3(0.62, 0.08, 0.018);
-    vec3 hot = vec3(1.0, 0.86, 0.48);
-    vec3 color = mix(cool, hot, heat) * bands * approaching;
-    gl_FragColor = vec4(color, clamp(heat * 1.35, 0.18, 0.92));
+    vec2 p = vUvPosition;
+    float radius = length(p);
+    float angle = atan(p.y, p.x);
+
+    // A thin inclined disk: the outer annuli are amber and the hotter inner edge is pale.
+    float diskRadius = length(vec2(p.x, p.y / 0.105));
+    float diskWindow = smoothstep(0.29, 0.34, diskRadius) * (1.0 - smoothstep(0.82, 0.98, diskRadius));
+    float diskStriation = 0.78 + 0.22 * sin(diskRadius * 86.0 - uTime * 1.6 + hash(floor(p * 90.0)) * 2.5);
+    float primaryDisk = diskWindow * diskStriation;
+
+    // Far-side disk light appears above and below the shadow after strong lensing.
+    float lensedRadius = 0.345 + 0.028 * cos(angle * 2.0);
+    float lensedArc = exp(-abs(radius - lensedRadius) * 95.0);
+    lensedArc *= smoothstep(0.055, 0.19, abs(p.y));
+    lensedArc *= 0.62 + 0.38 * smoothstep(0.0, 0.7, abs(p.x));
+
+    float photonRing = exp(-abs(radius - 0.274) * 190.0);
+    float heat = 1.0 - smoothstep(0.28, 0.96, max(diskRadius, radius));
+    float approaching = mix(0.46, 1.18, smoothstep(-0.9, 0.9, p.x));
+    vec3 outerColor = vec3(0.92, 0.34, 0.075);
+    vec3 innerColor = vec3(1.0, 0.95, 0.78);
+    vec3 diskColor = mix(outerColor, innerColor, heat) * approaching;
+    vec3 ringColor = mix(vec3(1.0, 0.58, 0.22), vec3(0.88, 0.94, 1.0), smoothstep(-0.7, 0.8, p.x));
+
+    float shadow = 1.0 - smoothstep(0.245, 0.258, radius);
+    float emission = max(primaryDisk, max(lensedArc, photonRing));
+    vec3 color = diskColor * (primaryDisk + lensedArc * 0.86) + ringColor * photonRing * 1.3;
+    color *= 1.0 - shadow;
+    float alpha = max(shadow, clamp(emission, 0.0, 1.0));
+    if (alpha < 0.008) discard;
+    gl_FragColor = vec4(color, alpha);
   }
 `;
 
@@ -294,6 +317,7 @@ export class CelestialBodyVisual {
   private readonly ringMaterial: Material | undefined;
   private atmosphere: Mesh<SphereGeometry, MeshBasicMaterial> | undefined;
   private ring: Mesh<RingGeometry, Material> | undefined;
+  private blackHoleAppearance: Mesh<PlaneGeometry, ShaderMaterial> | undefined;
   private quality: QualityLevel;
 
   constructor(
@@ -343,19 +367,18 @@ export class CelestialBodyVisual {
     }
 
     if (body.kind === 'black-hole') {
-      this.ringMaterial = new ShaderMaterial({
+      const appearanceMaterial = new ShaderMaterial({
         uniforms: { uTime: { value: 0 } },
-        vertexShader: DISK_VERTEX_SHADER,
-        fragmentShader: DISK_FRAGMENT_SHADER,
+        vertexShader: BLACK_HOLE_VERTEX_SHADER,
+        fragmentShader: BLACK_HOLE_FRAGMENT_SHADER,
         transparent: true,
         side: DoubleSide,
         depthWrite: false,
-        blending: AdditiveBlending,
         toneMapped: false,
       });
-      this.ring = new Mesh(this.createRingGeometry(1.65, 3.9), this.ringMaterial);
-      this.ring.rotation.x = Math.PI / 2;
-      this.oriented.add(this.ring);
+      this.blackHoleAppearance = new Mesh(new PlaneGeometry(8, 8), appearanceMaterial);
+      this.blackHoleAppearance.renderOrder = 3;
+      this.root.add(this.blackHoleAppearance);
     }
 
     if (body.kind === 'star') {
@@ -387,12 +410,16 @@ export class CelestialBodyVisual {
       }
     }
 
-    if (this.ringMaterial instanceof ShaderMaterial) {
-      const timeUniform = this.ringMaterial.uniforms.uTime;
+    if (this.blackHoleAppearance !== undefined) {
+      const timeUniform = this.blackHoleAppearance.material.uniforms.uTime;
       if (timeUniform !== undefined) {
         timeUniform.value = time;
       }
     }
+  }
+
+  faceCamera(cameraPosition: Vector3): void {
+    this.blackHoleAppearance?.lookAt(cameraPosition);
   }
 
   setQuality(quality: QualityLevel): void {
@@ -426,6 +453,8 @@ export class CelestialBodyVisual {
     this.atmosphereMaterial?.dispose();
     this.ring?.geometry.dispose();
     this.ringMaterial?.dispose();
+    this.blackHoleAppearance?.geometry.dispose();
+    this.blackHoleAppearance?.material.dispose();
 
     for (const child of this.root.children) {
       if (child instanceof Sprite) {

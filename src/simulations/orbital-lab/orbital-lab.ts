@@ -140,6 +140,7 @@ export class OrbitalLab {
   private readonly selectedRadiusElement: HTMLElement;
   private readonly selectedRenderRadiusElement: HTMLElement;
   private readonly selectedPositionElement: HTMLElement;
+  private readonly selectedPhysicsElement: HTMLElement;
   private readonly focusBodyButton: HTMLButtonElement;
   private readonly closeInspectorButton: HTMLButtonElement;
   private readonly experiments: GuidedExperiments<OrbitalExperimentId>;
@@ -201,6 +202,7 @@ export class OrbitalLab {
     this.selectedRadiusElement = requireElement(root, '[data-selected-radius]');
     this.selectedRenderRadiusElement = requireElement(root, '[data-selected-render-radius]');
     this.selectedPositionElement = requireElement(root, '[data-selected-position]');
+    this.selectedPhysicsElement = requireElement(root, '[data-selected-physics]');
     this.focusBodyButton = requireElement(root, '[data-focus-body]');
     this.closeInspectorButton = requireElement(root, '[data-close-inspector]');
 
@@ -595,13 +597,20 @@ export class OrbitalLab {
       this.collisionNotice.dataset.open = 'false';
       this.selectedNameElement.textContent = selection.body.name;
       this.selectedTypeElement.textContent = selection.body.kind.replaceAll('-', ' ');
-      this.selectedMassElement.textContent = selection.body.mass.toExponential(4);
+      this.selectedMassElement.textContent =
+        selection.body.mass >= 0.001
+          ? `${formatNumber(selection.body.mass, 6)} model units`
+          : `${selection.body.mass.toExponential(4)} model units`;
       this.selectedRadiusElement.textContent = formatMeasurement(selection.body.radius);
       this.selectedRenderRadiusElement.textContent = formatNumber(
         selection.body.renderRadius,
         4,
       );
       this.selectedPositionElement.textContent = 'Updating…';
+      this.selectedPhysicsElement.textContent =
+        selection.body.kind === 'black-hole'
+          ? 'Black centre: observable shadow. Fine rim: photon ring. Broad band and upper/lower arcs: direct and lensed accretion disk. The event horizon lies inside the shadow.'
+          : 'Rendered size is enlarged for readability; gravity and collisions use the physical radius and mass.';
     }
 
     this.bodyListElement
@@ -775,6 +784,7 @@ export class OrbitalLab {
                 <dd data-selected-position>—</dd>
               </div>
             </dl>
+            <p class="inspector-physics" data-selected-physics></p>
             <button class="button button-primary inspector-action" type="button" data-focus-body>
               Follow object
             </button>

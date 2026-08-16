@@ -308,6 +308,7 @@ export class OrbitalRenderer {
       this.selectionRing.lookAt(this.camera.position);
     }
     this.controls.update();
+    this.bodyVisuals.forEach((visual) => visual.faceCamera(this.camera.position));
     this.composer.render();
   }
 
@@ -616,9 +617,45 @@ export class OrbitalRenderer {
       this.bodyVisuals.map((visual) => visual.pickMesh),
       false,
     );
-    const bodyIndex = intersections[0]?.object.userData.bodyIndex as number | undefined;
+    const raycastBodyIndex = intersections[0]?.object.userData.bodyIndex as number | undefined;
+    const bodyIndex = raycastBodyIndex ?? this.pickCompactObject(event, bounds);
     this.selectBody(bodyIndex);
   };
+
+  private pickCompactObject(event: PointerEvent, bounds: DOMRect): number | undefined {
+    let selectedIndex: number | undefined;
+    let closestPointerDistance = Number.POSITIVE_INFINITY;
+    const halfVerticalField = Math.tan((this.camera.fov * Math.PI) / 360);
+
+    for (let bodyIndex = 0; bodyIndex < this.bodies.length; bodyIndex += 1) {
+      const body = this.bodies[bodyIndex];
+      if (body?.kind !== 'black-hole') {
+        continue;
+      }
+
+      const offset = bodyIndex * 3;
+      this.position.fromArray(this.previousPositions, offset);
+      const cameraDistance = this.camera.position.distanceTo(this.position);
+      this.focusTarget.copy(this.position).project(this.camera);
+      if (this.focusTarget.z < -1 || this.focusTarget.z > 1 || cameraDistance <= body.radius) {
+        continue;
+      }
+
+      const centerX = bounds.left + (this.focusTarget.x * 0.5 + 0.5) * bounds.width;
+      const centerY = bounds.top + (-this.focusTarget.y * 0.5 + 0.5) * bounds.height;
+      const visibleDiskRadius = Math.max(
+        18,
+        (body.renderRadius * bounds.height * 2.05) / (cameraDistance * halfVerticalField),
+      );
+      const pointerDistance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+      if (pointerDistance <= visibleDiskRadius && pointerDistance < closestPointerDistance) {
+        selectedIndex = bodyIndex;
+        closestPointerDistance = pointerDistance;
+      }
+    }
+
+    return selectedIndex;
+  }
 
   private createVelocityVectors(bodies: readonly BodyMetadata[]): LineSegments {
     const positions = new Float32Array(bodies.length * 2 * 3);

@@ -574,6 +574,17 @@ canvas {
   width: 100%;
 }
 
+.inspector-physics {
+  margin: -5px 0 15px;
+  padding: 10px 11px;
+  border: 1px solid rgba(123, 198, 247, 0.1);
+  border-radius: 10px;
+  color: #8ca2b8;
+  background: rgba(28, 62, 87, 0.16);
+  font-size: 0.58rem;
+  line-height: 1.48;
+}
+
 .hint {
   position: absolute;
   z-index: 3;
