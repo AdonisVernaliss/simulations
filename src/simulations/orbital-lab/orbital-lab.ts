@@ -111,6 +111,7 @@ export class OrbitalLab {
   private readonly resetButton: HTMLButtonElement;
   private readonly addBodyButton: HTMLButtonElement;
   private readonly vectorsButton: HTMLButtonElement;
+  private readonly fieldButton: HTMLButtonElement;
   private readonly systemViewButton: HTMLButtonElement;
   private readonly bodyDialog: HTMLDialogElement;
   private readonly bodyForm: HTMLFormElement;
@@ -154,6 +155,7 @@ export class OrbitalLab {
   private bodyCount = 0;
   private customBodySequence = 0;
   private vectorsVisible = false;
+  private fieldVisible = false;
   private bodies: readonly BodyMetadata[] = [];
   private selectedBodyIndex: number | undefined;
   private lastCollisionSequence = 0;
@@ -169,6 +171,7 @@ export class OrbitalLab {
     this.resetButton = requireElement(root, '[data-reset]');
     this.addBodyButton = requireElement(root, '[data-add-body]');
     this.vectorsButton = requireElement(root, '[data-vectors]');
+    this.fieldButton = requireElement(root, '[data-gravity-field]');
     this.systemViewButton = requireElement(root, '[data-system-view]');
     this.bodyDialog = requireElement(root, '[data-body-dialog]');
     this.bodyForm = requireElement(root, '[data-body-form]');
@@ -374,6 +377,12 @@ export class OrbitalLab {
       this.vectorsVisible = !this.vectorsVisible;
       this.vectorsButton.setAttribute('aria-pressed', String(this.vectorsVisible));
       this.renderer.setVelocityVectorsVisible(this.vectorsVisible);
+    });
+
+    this.fieldButton.addEventListener('click', () => {
+      this.fieldVisible = !this.fieldVisible;
+      this.fieldButton.setAttribute('aria-pressed', String(this.fieldVisible));
+      this.renderer.setGravityFieldVisible(this.fieldVisible);
     });
 
     this.systemViewButton.addEventListener('click', () => {
@@ -671,6 +680,10 @@ export class OrbitalLab {
             <button class="tool-button" type="button" data-vectors aria-pressed="false">
               <span aria-hidden="true">↗</span>
               <small>Vectors</small>
+            </button>
+            <button class="tool-button" type="button" data-gravity-field aria-pressed="false">
+              <span aria-hidden="true">⌁</span>
+              <small>Field</small>
             </button>
             <button class="tool-button" type="button" data-system-view>
               <span aria-hidden="true">◎</span>

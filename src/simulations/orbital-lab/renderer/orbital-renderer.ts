@@ -36,6 +36,7 @@ import {
   CelestialMaterialLibrary,
 } from './celestial-body-visual';
 import { GravitationalLensing } from './gravitational-lensing';
+import { GravityFieldVisual } from './gravity-field-visual';
 
 export type QualityLevel = 'low' | 'balanced' | 'high';
 
@@ -135,6 +136,7 @@ export class OrbitalRenderer {
   private readonly scenePass: RenderPass;
   private readonly outputPass: OutputPass;
   private readonly lensing = new GravitationalLensing();
+  private readonly gravityField = new GravityFieldVisual();
   private readonly scene = new Scene();
   private readonly camera = new PerspectiveCamera(42, 1, 0.01, 250);
   private readonly controls: OrbitControls;
@@ -204,6 +206,7 @@ export class OrbitalRenderer {
     this.starField = this.createStarField();
     this.selectionRing = this.createSelectionRing();
     this.scene.add(this.starField);
+    this.scene.add(this.gravityField.mesh);
     this.scene.add(new AmbientLight(0x7390ad, 0.32));
     this.scene.add(this.primaryLight);
     this.scene.add(this.selectionRing);
@@ -230,6 +233,7 @@ export class OrbitalRenderer {
     this.followedBodyIndex = undefined;
     this.selectionRing.visible = false;
     this.onBodySelected(undefined);
+    this.gravityField.setBodies(bodies, cameraDistance);
 
     this.bodyVisuals = bodies.map((body, bodyIndex) => {
       const visual = new CelestialBodyVisual(
@@ -285,6 +289,7 @@ export class OrbitalRenderer {
     }
 
     this.updateSelectionRing(positions);
+    this.gravityField.update(positions);
     this.lensing.update(this.bodies, positions, this.camera, this.quality);
 
     this.previousPositions.set(positions);
@@ -309,6 +314,7 @@ export class OrbitalRenderer {
     this.starField.geometry.setDrawRange(0, profile.starCount);
     this.materialLibrary.setQuality(quality);
     this.bodyVisuals.forEach((visual) => visual.setQuality(quality));
+    this.gravityField.setQuality(quality);
     this.composer.setPixelRatio(Math.min(devicePixelRatio, profile.maximumPixelRatio));
     this.resize();
   }
@@ -318,6 +324,11 @@ export class OrbitalRenderer {
     if (this.velocityVectors !== undefined) {
       this.velocityVectors.visible = visible;
     }
+  }
+
+  setGravityFieldVisible(visible: boolean): void {
+    this.gravityField.setVisible(visible);
+    this.gravityField.update(this.previousPositions);
   }
 
   selectBody(index: number | undefined): void {
@@ -381,6 +392,7 @@ export class OrbitalRenderer {
     this.glowTexture.dispose();
     this.materialLibrary.dispose();
     this.lensing.dispose();
+    this.gravityField.dispose();
     this.scenePass.dispose();
     this.outputPass.dispose();
     this.composer.dispose();
