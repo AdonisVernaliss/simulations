@@ -34,6 +34,21 @@ describe('orbital presets', () => {
     }
   });
 
+  it('uses physical collision radii and explicit visual profiles for the solar system', () => {
+    const solarSystem = presets.find((preset) => preset.id === 'solar-system');
+    expect(solarSystem).toBeDefined();
+
+    for (const body of solarSystem!.bodies) {
+      expect(body.kind).toBeDefined();
+      expect(body.surface).toBeDefined();
+      expect(body.renderRadius).toBeGreaterThan(body.radius);
+    }
+
+    const earth = solarSystem!.bodies.find((body) => body.id === 'earth');
+    expect(earth?.surface).toBe('earth');
+    expect(earth?.radius).toBeCloseTo(42.587e-6, 9);
+  });
+
   it('includes a collision experiment that conserves mass and momentum while merging', () => {
     const preset = presets.find((candidate) => candidate.id === 'head-on-collision');
     expect(preset).toBeDefined();
