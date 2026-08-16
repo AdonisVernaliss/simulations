@@ -520,7 +520,7 @@ export class OrbitalRenderer {
       const warmth = random();
       this.color.set(warmth > 0.82 ? 0xffd3a1 : warmth < 0.2 ? 0xa9ccff : 0xe7f1ff);
       this.color.multiplyScalar(
-        inGalacticCore ? 0.82 + random() * 0.35 : 0.63 + random() * 0.44,
+        inGalacticCore ? 1.18 + random() * 0.42 : 0.94 + random() * 0.48,
       );
       this.color.toArray(colors, offset);
     }
@@ -530,11 +530,12 @@ export class OrbitalRenderer {
     geometry.setAttribute('color', new BufferAttribute(colors, 3));
     const material = new PointsMaterial({
       vertexColors: true,
-      size: 0.19,
+      size: 0.52,
       sizeAttenuation: true,
       transparent: true,
       opacity: 0.96,
       depthWrite: false,
+      blending: AdditiveBlending,
       toneMapped: false,
     });
 
