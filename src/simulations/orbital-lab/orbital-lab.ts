@@ -4,6 +4,7 @@ import {
 } from '../../core/guided-experiments';
 import { getPreset, presets } from './model/presets';
 import type { CollisionEvent } from './model/types';
+import { modelTimeToPhysicalSeconds } from './model/time-scale';
 import {
   OrbitalRenderer,
   type BodySelection,
@@ -350,7 +351,10 @@ export class OrbitalLab {
     const momentum = Math.hypot(...frame.diagnostics.linearMomentum);
 
     this.timeElement.textContent = formatDuration(
-      frame.time * getPreset(this.activePresetId).secondsPerTimeUnit,
+      modelTimeToPhysicalSeconds(
+        frame.time,
+        getPreset(this.activePresetId).secondsPerTimeUnit,
+      ),
     );
     this.fpsElement.textContent = formatNumber(this.framesPerSecond, 0);
     this.energyDriftElement.textContent = `${energyDrift.toExponential(1)}%`;

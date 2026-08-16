@@ -3,6 +3,7 @@
 import { FixedStepClock } from '../../core/fixed-step';
 import { NBodySimulation } from './model/n-body';
 import { getPreset, type SimulationPreset } from './model/presets';
+import { physicalWarpToModelRate } from './model/time-scale';
 import type {
   AdvanceRequest,
   BodyMetadata,
@@ -105,7 +106,9 @@ const advance = (request: AdvanceRequest): void => {
 
   const previousBodyCount = simulation.count;
   const elapsedSeconds = Math.min(request.elapsedSeconds, 0.25);
-  const modelUnitsPerSecond = paused ? 0 : timeWarp / activePreset.secondsPerTimeUnit;
+  const modelUnitsPerSecond = paused
+    ? 0
+    : physicalWarpToModelRate(timeWarp, activePreset.secondsPerTimeUnit);
   const requestedModelTime = elapsedSeconds * modelUnitsPerSecond;
   const result =
     requestedModelTime > 0 && requestedModelTime < activePreset.fixedStep
