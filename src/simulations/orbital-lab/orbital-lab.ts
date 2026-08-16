@@ -18,6 +18,8 @@ import {
 type QualityMode = QualityLevel | 'auto';
 type OrbitalExperimentId =
   | 'solar-system'
+  | 'black-hole-flyby'
+  | 'black-hole-binary'
   | 'binary-stars'
   | 'figure-eight'
   | 'head-on-collision';
@@ -29,6 +31,20 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     title: 'Distance sets the orbital clock',
     question: 'Why do inner planets complete orbits sooner?',
     observation: 'Compare trail motion: circular speed scales as r⁻¹⁄² and period as r³⁄².',
+  },
+  {
+    id: 'black-hole-flyby',
+    label: 'Black hole flyby',
+    title: 'One encounter reshapes a whole system',
+    question: 'Can a black hole alter a planet without swallowing it?',
+    observation: 'Watch each body exchange energy with the intruder: capture is only one possible outcome.',
+  },
+  {
+    id: 'black-hole-binary',
+    label: 'Black hole + star',
+    title: 'Orbit in a combined gravitational field',
+    question: 'What do distant worlds orbit when the centre contains two moving masses?',
+    observation: 'The star and black hole orbit their barycentre; the outer worlds respond to both at every step.',
   },
   {
     id: 'binary-stars',
@@ -534,11 +550,11 @@ export class OrbitalLab {
     return `
       <article class="lab-shell">
         <header class="topbar">
-          <div class="brand" aria-label="Orbital Mechanics Lab">
+          <div class="brand" aria-label="Cosmic Sandbox">
             <span class="brand-mark" aria-hidden="true">
               <span></span>
             </span>
-            <span>Orbital Mechanics Lab</span>
+            <span>Cosmic Sandbox</span>
             <a class="lab-index-link" href="?lab=catalog">All labs</a>
           </div>
           <label class="system-picker">
@@ -548,11 +564,11 @@ export class OrbitalLab {
           <div class="status" data-status data-state="loading" role="status">Loading model</div>
         </header>
 
-        <section class="viewport" aria-label="Interactive orbital simulation">
+        <section class="viewport" aria-label="Interactive cosmic simulation">
           <canvas data-canvas aria-label="Three-dimensional view of orbiting bodies"></canvas>
 
           <div class="scene-heading">
-            <p class="eyebrow">Live orbital system</p>
+            <p class="eyebrow">Live gravitational system</p>
             <h1 data-title>Idealized solar system</h1>
             <p data-summary>Loading orbital model…</p>
           </div>

@@ -29,7 +29,7 @@ const start = async (): Promise<void> => {
 
   if (lab.id === 'orbital') {
     const { OrbitalLab } = await import('./simulations/orbital-lab/orbital-lab');
-    document.title = 'Orbital Mechanics Lab';
+    document.title = 'Cosmic Sandbox';
     new OrbitalLab(app).start();
     return;
   }

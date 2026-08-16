@@ -13,12 +13,12 @@ export interface LabDefinition {
 export const labs: readonly LabDefinition[] = [
   {
     id: 'orbital',
-    name: 'Orbital Mechanics',
+    name: 'Cosmic Sandbox',
     field: 'Classical mechanics',
     summary: 'Build and inspect gravitational systems in a real-time Newtonian N-body sandbox.',
     status: 'available',
     model: 'Newtonian point masses · velocity Verlet · inelastic merging',
-    experimentCount: 4,
+    experimentCount: 6,
   },
   {
     id: 'atomic',

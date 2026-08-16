@@ -49,6 +49,24 @@ describe('orbital presets', () => {
     expect(earth?.radius).toBeCloseTo(42.587e-6, 9);
   });
 
+  it('includes black holes as massive participants in shared N-body systems', () => {
+    const flyby = presets.find((preset) => preset.id === 'black-hole-flyby');
+    expect(flyby).toBeDefined();
+    const simulation = new NBodySimulation(flyby!.bodies, {
+      gravitationalConstant: 1,
+      softening: 0.0001,
+    });
+    const blackHoleIndex = simulation.kinds.indexOf('black-hole');
+    const initialVelocity = simulation.velocities[blackHoleIndex * 3 + 1]!;
+
+    for (let index = 0; index < 100; index += 1) {
+      simulation.step(flyby!.fixedStep);
+    }
+
+    expect(simulation.kinds[blackHoleIndex]).toBe('black-hole');
+    expect(simulation.velocities[blackHoleIndex * 3 + 1]).not.toBeCloseTo(initialVelocity, 8);
+  });
+
   it('includes a collision experiment that conserves mass and momentum while merging', () => {
     const preset = presets.find((candidate) => candidate.id === 'head-on-collision');
     expect(preset).toBeDefined();

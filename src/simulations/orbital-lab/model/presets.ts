@@ -13,6 +13,35 @@ export interface SimulationPreset {
 
 const body = (definition: BodyDefinition): BodyDefinition => definition;
 
+const barycentricBodies = (definitions: readonly BodyDefinition[]): BodyDefinition[] => {
+  const totalMass = definitions.reduce((sum, definition) => sum + definition.mass, 0);
+  const center = [0, 0, 0];
+  const centerVelocity = [0, 0, 0];
+
+  for (const definition of definitions) {
+    for (let component = 0; component < 3; component += 1) {
+      center[component] =
+        center[component]! + definition.position[component]! * definition.mass;
+      centerVelocity[component] =
+        centerVelocity[component]! + definition.velocity[component]! * definition.mass;
+    }
+  }
+
+  return definitions.map((definition) => ({
+    ...definition,
+    position: [
+      definition.position[0] - center[0]! / totalMass,
+      definition.position[1] - center[1]! / totalMass,
+      definition.position[2] - center[2]! / totalMass,
+    ],
+    velocity: [
+      definition.velocity[0] - centerVelocity[0]! / totalMass,
+      definition.velocity[1] - centerVelocity[1]! / totalMass,
+      definition.velocity[2] - centerVelocity[2]! / totalMass,
+    ],
+  }));
+};
+
 export const presets = [
   {
     id: 'solar-system',
@@ -150,6 +179,140 @@ export const presets = [
         velocity: [0, 0.182361783677, 0],
       }),
     ],
+  },
+  {
+    id: 'black-hole-flyby',
+    name: 'Black hole flyby',
+    summary: 'A compact object crosses a young planetary system and exchanges energy with every body.',
+    fixedStep: 0.001,
+    timeScale: 0.52,
+    cameraDistance: 8.5,
+    trailSpan: 16,
+    bodies: barycentricBodies([
+      body({
+        id: 'flyby-star',
+        name: 'Host star',
+        kind: 'star',
+        surface: 'sun',
+        mass: 1,
+        radius: 0.075,
+        renderRadius: 0.22,
+        color: '#ffd284',
+        axialTilt: 0.12,
+        rotationRate: 2.4,
+        position: [0, 0, 0],
+        velocity: [0, 0, 0],
+      }),
+      body({
+        id: 'inner-world',
+        name: 'Inner world',
+        kind: 'terrestrial',
+        surface: 'earth',
+        mass: 0.002,
+        radius: 0.025,
+        renderRadius: 0.082,
+        color: '#68a8ee',
+        axialTilt: 0.31,
+        rotationRate: 4.2,
+        position: [0.9, 0, 0],
+        velocity: [0, 1.054, 0],
+      }),
+      body({
+        id: 'outer-giant',
+        name: 'Outer giant',
+        kind: 'gas-giant',
+        surface: 'jupiter',
+        mass: 0.015,
+        radius: 0.055,
+        renderRadius: 0.14,
+        color: '#d9af82',
+        axialTilt: 0.08,
+        rotationRate: 5.8,
+        position: [1.8, 0, 0],
+        velocity: [0, 0.745, 0],
+      }),
+      body({
+        id: 'intruder-black-hole',
+        name: 'Intruder black hole',
+        kind: 'black-hole',
+        surface: 'none',
+        mass: 2,
+        radius: 0.04,
+        renderRadius: 0.17,
+        color: '#ff9d52',
+        axialTilt: 0.34,
+        rotationRate: 1.2,
+        position: [-5.2, -1.25, 0],
+        velocity: [0.74, 0.11, 0],
+      }),
+    ]),
+  },
+  {
+    id: 'black-hole-binary',
+    name: 'Black hole and star',
+    summary: 'A star and a black hole orbit their barycentre while two worlds respond to the combined field.',
+    fixedStep: 0.001,
+    timeScale: 0.48,
+    cameraDistance: 10,
+    trailSpan: 20,
+    bodies: barycentricBodies([
+      body({
+        id: 'binary-black-hole',
+        name: 'Black hole',
+        kind: 'black-hole',
+        surface: 'none',
+        mass: 4,
+        radius: 0.055,
+        renderRadius: 0.19,
+        color: '#ffac67',
+        axialTilt: 0.24,
+        rotationRate: 1.4,
+        position: [-0.5, 0, 0],
+        velocity: [0, -0.2828427125, 0],
+      }),
+      body({
+        id: 'binary-star-companion',
+        name: 'Companion star',
+        kind: 'star',
+        surface: 'sun',
+        mass: 1,
+        radius: 0.085,
+        renderRadius: 0.23,
+        color: '#a8caff',
+        axialTilt: 0.08,
+        rotationRate: 2.1,
+        position: [2, 0, 0],
+        velocity: [0, 1.13137085, 0],
+      }),
+      body({
+        id: 'circumbinary-world',
+        name: 'Circumbinary world',
+        kind: 'terrestrial',
+        surface: 'earth',
+        mass: 0.001,
+        radius: 0.022,
+        renderRadius: 0.085,
+        color: '#5ea4f0',
+        axialTilt: 0.42,
+        rotationRate: 4.6,
+        position: [0, 5.2, 0],
+        velocity: [-0.981, 0, 0],
+      }),
+      body({
+        id: 'outer-ice-world',
+        name: 'Outer ice world',
+        kind: 'ice-giant',
+        surface: 'neptune',
+        mass: 0.004,
+        radius: 0.038,
+        renderRadius: 0.11,
+        color: '#477ceb',
+        axialTilt: 0.5,
+        rotationRate: 3.8,
+        position: [0, -7.2, 0],
+        velocity: [0.834, 0, 0],
+      }),
+    ]),
   },
   {
     id: 'binary-stars',
