@@ -163,6 +163,24 @@ const BLACK_HOLE_FRAGMENT_SHADER = `
   }
 `;
 
+const QUASAR_JET_FRAGMENT_SHADER = `
+  varying vec2 vUvPosition;
+
+  void main() {
+    vec2 p = vUvPosition;
+    float axial = abs(p.y);
+    float halfWidth = 0.025 + 0.20 * axial;
+    float edge = 1.0 - smoothstep(0.28, 1.0, abs(p.x) / halfWidth);
+    float launch = smoothstep(0.055, 0.17, axial);
+    float fade = 1.0 - smoothstep(0.62, 1.0, axial);
+    float spine = 1.0 - smoothstep(0.0, halfWidth * 0.24, abs(p.x));
+    float alpha = edge * launch * fade * (0.10 + spine * 0.20);
+    if (alpha < 0.004) discard;
+    vec3 color = mix(vec3(0.27, 0.57, 0.84), vec3(0.82, 0.94, 1.0), spine);
+    gl_FragColor = vec4(color, alpha);
+  }
+`;
+
 const hash2 = (x: number, y: number, seed: number): number => {
   const value = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43_758.5453;
   return value - Math.floor(value);
@@ -332,6 +350,7 @@ export class CelestialBodyVisual {
   private atmosphere: Mesh<SphereGeometry, MeshBasicMaterial> | undefined;
   private ring: Mesh<RingGeometry, Material> | undefined;
   private blackHoleAppearance: Mesh<PlaneGeometry, ShaderMaterial> | undefined;
+  private quasarJetAppearance: Mesh<PlaneGeometry, ShaderMaterial> | undefined;
   private compactField: Group | undefined;
   private readonly decorativeMeshes: Mesh[] = [];
   private quality: QualityLevel;
@@ -450,6 +469,7 @@ export class CelestialBodyVisual {
 
   faceCamera(cameraPosition: Vector3): void {
     this.blackHoleAppearance?.lookAt(cameraPosition);
+    this.quasarJetAppearance?.lookAt(cameraPosition);
   }
 
   setQuality(quality: QualityLevel): void {
@@ -556,26 +576,19 @@ export class CelestialBodyVisual {
   }
 
   private addQuasarJets(): void {
-    const jets = new Group();
-    jets.rotation.x = Math.PI / 2;
-    for (const direction of [-1, 1]) {
-      const jet = new Mesh(
-        new ConeGeometry(0.42, 11, 28, 1, true),
-        new MeshBasicMaterial({
-          color: 0xaad8ff,
-          transparent: true,
-          opacity: 0.12,
-          blending: AdditiveBlending,
-          depthWrite: false,
-          side: DoubleSide,
-          toneMapped: false,
-        }),
-      );
-      jet.position.y = direction * 5.5;
-      if (direction < 0) jet.rotation.z = Math.PI;
-      jets.add(jet);
-      this.decorativeMeshes.push(jet);
-    }
-    this.overlay.add(jets);
+    this.quasarJetAppearance = new Mesh(
+      new PlaneGeometry(2.4, 9),
+      new ShaderMaterial({
+        vertexShader: BLACK_HOLE_VERTEX_SHADER,
+        fragmentShader: QUASAR_JET_FRAGMENT_SHADER,
+        transparent: true,
+        depthWrite: false,
+        blending: AdditiveBlending,
+        toneMapped: false,
+      }),
+    );
+    this.quasarJetAppearance.renderOrder = 2;
+    this.overlay.add(this.quasarJetAppearance);
+    this.decorativeMeshes.push(this.quasarJetAppearance);
   }
 }
