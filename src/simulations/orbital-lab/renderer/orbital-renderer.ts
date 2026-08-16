@@ -26,12 +26,16 @@ import {
   WebGLRenderer,
 } from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 
 import type { BodyMetadata } from '../worker-protocol';
 import {
   CelestialBodyVisual,
   CelestialMaterialLibrary,
 } from './celestial-body-visual';
+import { GravitationalLensing } from './gravitational-lensing';
 
 export type QualityLevel = 'low' | 'balanced' | 'high';
 
@@ -127,6 +131,10 @@ class BodyTrail {
 
 export class OrbitalRenderer {
   private readonly renderer: WebGLRenderer;
+  private readonly composer: EffectComposer;
+  private readonly scenePass: RenderPass;
+  private readonly outputPass: OutputPass;
+  private readonly lensing = new GravitationalLensing();
   private readonly scene = new Scene();
   private readonly camera = new PerspectiveCamera(42, 1, 0.01, 250);
   private readonly controls: OrbitControls;
@@ -176,6 +184,12 @@ export class OrbitalRenderer {
     this.materialLibrary = new CelestialMaterialLibrary(
       this.renderer.capabilities.getMaxAnisotropy(),
     );
+    this.composer = new EffectComposer(this.renderer);
+    this.scenePass = new RenderPass(this.scene, this.camera);
+    this.outputPass = new OutputPass();
+    this.composer.addPass(this.scenePass);
+    this.composer.addPass(this.lensing.pass);
+    this.composer.addPass(this.outputPass);
 
     this.camera.position.set(0, -7, 6);
     this.controls = new OrbitControls(this.camera, canvas);
@@ -271,6 +285,7 @@ export class OrbitalRenderer {
     }
 
     this.updateSelectionRing(positions);
+    this.lensing.update(this.bodies, positions, this.camera, this.quality);
 
     this.previousPositions.set(positions);
     this.previousTime = time;
@@ -282,7 +297,7 @@ export class OrbitalRenderer {
       this.selectionRing.lookAt(this.camera.position);
     }
     this.controls.update();
-    this.renderer.render(this.scene, this.camera);
+    this.composer.render();
   }
 
   setQuality(quality: QualityLevel): void {
@@ -294,6 +309,7 @@ export class OrbitalRenderer {
     this.starField.geometry.setDrawRange(0, profile.starCount);
     this.materialLibrary.setQuality(quality);
     this.bodyVisuals.forEach((visual) => visual.setQuality(quality));
+    this.composer.setPixelRatio(Math.min(devicePixelRatio, profile.maximumPixelRatio));
     this.resize();
   }
 
@@ -364,6 +380,10 @@ export class OrbitalRenderer {
     this.selectionRing.material.dispose();
     this.glowTexture.dispose();
     this.materialLibrary.dispose();
+    this.lensing.dispose();
+    this.scenePass.dispose();
+    this.outputPass.dispose();
+    this.composer.dispose();
     this.renderer.dispose();
   }
 
@@ -373,6 +393,7 @@ export class OrbitalRenderer {
     const height = Math.max(parent?.clientHeight ?? this.canvas.clientHeight, 1);
 
     this.renderer.setSize(width, height, false);
+    this.composer.setSize(width, height);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   }
