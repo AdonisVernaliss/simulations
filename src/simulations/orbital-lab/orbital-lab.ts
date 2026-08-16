@@ -370,16 +370,16 @@ export class OrbitalLab {
     this.lastCollisionSequence = collision.sequence;
     const descriptions: Record<CollisionEvent['outcome'], readonly [string, string]> = {
       merge: [
-        'Accretion',
-        'Impact speed stayed below the disruption regime; mass and momentum formed one remnant.',
+        'Hot impact remnant',
+        'Mass and momentum formed one heated body. At equal bulk density, two equal worlds double the mass but increase radius only by ∛2 ≈ 1.26.',
       ],
       'hit-and-run': [
         'Hit and run',
         'A fast grazing impact transferred momentum, but both major bodies survived.',
       ],
       disruption: [
-        'Catastrophic disruption',
-        `${collision.fragmentCount} resolved remnants now continue under the shared gravitational field.`,
+        'Hydrodynamic limit reached',
+        'Impact energy crossed the disruption threshold. Fragment animation is intentionally omitted: resolving the debris requires a fluid/SPH model.',
       ],
       capture: [
         'Horizon capture',
@@ -678,7 +678,9 @@ export class OrbitalLab {
             )}`;
       this.selectedRotationElement.textContent = rotationPeriod;
       this.selectedPhysicsElement.textContent =
-        selection.body.surface === 'quasar'
+        selection.body.surface === 'molten'
+          ? 'A volume-equivalent impact remnant: mass and linear momentum are conserved, while the hot fractured surface is a qualitative thermal state. Cooling, composition, vapor and ejecta require a hydrodynamic material model.'
+          : selection.body.surface === 'quasar'
           ? 'Active object: the central mass is a black hole. The disk and bipolar jet are emission overlays; nearby bodies still interact with the black hole through the shared gravity solver.'
           : selection.body.kind === 'black-hole'
             ? 'Black centre: observable shadow. Fine rim: photon ring. Broad band and upper/lower arcs: direct and lensed accretion disk. The event horizon lies inside the shadow.'
