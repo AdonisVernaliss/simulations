@@ -382,7 +382,7 @@ export const presets = [
         kind: 'black-hole',
         surface: 'none',
         mass: 6,
-        radius: 0.08,
+        radius: 0.12,
         renderRadius: 0.23,
         color: '#ffb36b',
         axialTilt: 1.03,
