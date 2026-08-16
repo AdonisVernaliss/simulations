@@ -1,3 +1,7 @@
+import {
+  GuidedExperiments,
+  type GuidedExperiment,
+} from '../../core/guided-experiments';
 import { getPreset, presets } from './model/presets';
 import {
   OrbitalRenderer,
@@ -12,6 +16,42 @@ import {
 } from './simulation-worker-client';
 
 type QualityMode = QualityLevel | 'auto';
+type OrbitalExperimentId =
+  | 'solar-system'
+  | 'binary-stars'
+  | 'figure-eight'
+  | 'head-on-collision';
+
+const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
+  {
+    id: 'solar-system',
+    label: 'Planetary system',
+    title: 'Distance sets the orbital clock',
+    question: 'Why do inner planets complete orbits sooner?',
+    observation: 'Compare trail motion: circular speed scales as r⁻¹⁄² and period as r³⁄².',
+  },
+  {
+    id: 'binary-stars',
+    label: 'Binary stars',
+    title: 'Orbit a shared center of mass',
+    question: 'What does each equal star orbit when neither is fixed?',
+    observation: 'Both stars remain opposite and circle the stationary barycentre between them.',
+  },
+  {
+    id: 'figure-eight',
+    label: 'Three-body orbit',
+    title: 'A rare periodic three-body choreography',
+    question: 'Can three gravitating bodies repeat one shared path?',
+    observation: 'With special initial conditions, equal bodies follow the same figure eight in phase order.',
+  },
+  {
+    id: 'head-on-collision',
+    label: 'Collision',
+    title: 'Merge two gravitating bodies',
+    question: 'Which quantities survive a perfectly inelastic collision?',
+    observation: 'Total mass and linear momentum remain; kinetic energy is converted and is not conserved.',
+  },
+] as const;
 
 const requireElement = <ElementType extends Element>(
   root: ParentNode,
@@ -59,6 +99,7 @@ export class OrbitalLab {
   private readonly selectedPositionElement: HTMLElement;
   private readonly focusBodyButton: HTMLButtonElement;
   private readonly closeInspectorButton: HTMLButtonElement;
+  private readonly experiments: GuidedExperiments<OrbitalExperimentId>;
   private readonly reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   private animationFrame = 0;
@@ -118,6 +159,11 @@ export class OrbitalLab {
       onFrame: (frame) => this.handleFrame(frame),
       onError: (message) => this.setStatus(message, 'error'),
     });
+    this.experiments = new GuidedExperiments(
+      requireElement(root, '.viewport'),
+      ORBITAL_EXPERIMENTS,
+      (id) => this.applyExperiment(id),
+    );
 
     this.populatePresets();
     this.bindControls();
@@ -132,6 +178,8 @@ export class OrbitalLab {
   start(): void {
     this.setStatus('Loading model', 'loading');
     this.worker.initialize(this.activePresetId);
+    this.experiments.activate('solar-system', false);
+    this.experiments.open();
     this.animationFrame = requestAnimationFrame(this.tick);
   }
 
@@ -212,6 +260,7 @@ export class OrbitalLab {
   private bindControls(): void {
     this.presetSelect.addEventListener('change', () => {
       this.activePresetId = this.presetSelect.value;
+      this.experiments.activate(this.activePresetId as OrbitalExperimentId, false);
       this.setStatus('Loading model', 'loading');
       this.worker.initialize(this.activePresetId);
     });
@@ -224,6 +273,7 @@ export class OrbitalLab {
     });
 
     this.addBodyButton.addEventListener('click', () => {
+      this.experiments.setFreeMode();
       const nameInput = requireElement<HTMLInputElement>(this.bodyForm, '[name="name"]');
       nameInput.value = `Body ${this.bodyCount + 1}`;
       this.bodyFormError.textContent = '';
@@ -338,6 +388,13 @@ export class OrbitalLab {
       this.setStatus('Restoring model', 'loading');
       this.worker.initialize(this.activePresetId);
     });
+  }
+
+  private applyExperiment(id: OrbitalExperimentId): void {
+    this.activePresetId = id;
+    this.presetSelect.value = id;
+    this.setStatus('Loading experiment', 'loading');
+    this.worker.initialize(id);
   }
 
   private togglePaused(): void {
