@@ -7,6 +7,7 @@ import {
   getDiskFlux,
   getDiskTemperature,
   getEddingtonLuminosity,
+  getKeplerianPeriod,
 } from '../src/simulations/quasar-lab/model/thin-disk';
 
 describe('thin accretion disk baseline', () => {
@@ -49,5 +50,11 @@ describe('thin accretion disk baseline', () => {
   it('rejects non-physical mass inputs in direct flux calculations', () => {
     expect(() => getDiskFlux(0, 1e20, 12)).toThrow(RangeError);
     expect(() => getDiskFlux(-1e8, 1e20, 12)).toThrow(RangeError);
+  });
+
+  it('scales Keplerian period with mass and radius to the three-halves power', () => {
+    const reference = getKeplerianPeriod(1e8, 10);
+    expect(getKeplerianPeriod(2e8, 10) / reference).toBeCloseTo(2, 12);
+    expect(getKeplerianPeriod(1e8, 40) / reference).toBeCloseTo(8, 12);
   });
 });

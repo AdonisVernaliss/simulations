@@ -89,6 +89,16 @@ export const getWienPeakWavelength = (temperatureKelvin: number): number => {
   return WIEN_DISPLACEMENT_CONSTANT / temperatureKelvin;
 };
 
+export const getKeplerianPeriod = (solarMasses: number, radiusRg: number): number => {
+  validateSolarMasses(solarMasses);
+  if (!Number.isFinite(radiusRg) || radiusRg <= 0) {
+    throw new RangeError('Orbital radius must be finite and positive.');
+  }
+  const gravitationalParameter = NOMINAL_SOLAR_MASS_PARAMETER * solarMasses;
+  const radius = (radiusRg * gravitationalParameter) / SPEED_OF_LIGHT ** 2;
+  return 2 * Math.PI * Math.sqrt(radius ** 3 / gravitationalParameter);
+};
+
 export const createDiskProfile = (
   solarMasses: number,
   eddingtonRatio: number,
