@@ -25,16 +25,16 @@ mode without changing the underlying physical model. See
 
 The first simulation models gravitational systems with:
 
-- eleven systems covering the Solar System, stellar and compact binaries, a figure eight, black-hole encounters and mergers, an active nucleus, a pulsar system, accretion, and disruption;
+- eleven systems covering the Solar System, stellar and compact binaries, a figure eight, black-hole encounters, tidal stretching and mergers, an active nucleus, a pulsar system, and accretion;
 - black holes, active nuclei, neutron stars, pulsars, ordinary stars, terrestrial worlds, rocky bodies, gas giants, and ice giants in one N-body scene;
 - configurable object type, mass, position, velocity, physical radius, visual radius, and color;
 - orbital trails and optional velocity vectors;
 - direct object selection, a live object inspector, and camera tracking;
 - NASA/JPL planet maps, procedural photospheres and planetary materials, atmosphere, rings, and adjustable geometry detail;
-- screen-space Schwarzschild thin-lens distortion, a DNGR-informed black-hole appearance, and an optional Newtonian potential overlay;
+- screen-space Schwarzschild thin-lens distortion, dynamic three-dimensional accretion disks, a DNGR-informed observable shadow, and an optional Newtonian potential overlay;
 - live energy, momentum, frame rate, and physical elapsed-time diagnostics;
 - physical time warp from real time through `10⁷×`, plus pause, reset, camera, and rendering-quality controls;
-- energy- and geometry-dependent accretion, hit-and-run, disruption, capture, and black-hole merger outcomes;
+- energy- and geometry-dependent accretion, hit-and-run, disruption-threshold detection, capture, and black-hole merger outcomes;
 - automatic quality reduction when the frame budget is exceeded.
 
 ### Interaction
@@ -50,7 +50,7 @@ The first simulation models gravitational systems with:
 
 The simulation uses normalized units with a gravitational constant of `G = 1`. The astronomical presets map one integration-time unit to `sqrt(AU³/GM☉)`, so the time-warp selector advances physical seconds rather than multiplying an arbitrary animation speed. Motion uses velocity Verlet with bounded fixed steps at visible time warps and smaller direct steps near real time. A small Plummer-style softening term limits numerical instability when two point masses approach the same position.
 
-Preset positions and velocities are barycentric, so their initial center of mass and total linear momentum are effectively zero. Physical radii control collision and capture; independent visual radii keep distant objects readable. Ordinary accretion and resolved disruption conserve total mass and linear momentum; kinetic energy is not conserved during a merge.
+Preset positions and velocities are barycentric, so their initial center of mass and total linear momentum are effectively zero. Physical radii control collision and capture; independent visual radii keep distant objects readable. Ordinary accretion conserves total mass and linear momentum; kinetic energy is not conserved during a merge. Disruptive debris is not rendered because a credible result requires a hydrodynamic material solver.
 
 The Solar System preset uses JPL-derived mass ratios and orbital scales, but deliberately uses circular, coplanar initial orbits. The model is educational rather than a source of astronomical ephemerides.
 
@@ -97,6 +97,7 @@ See the [Quasar thin-disk model card](docs/thin-disk.md) for equations, assumpti
 
 - Physics runs in a dedicated Web Worker.
 - Frame data uses a recycled transferable buffer.
+- Display-only energy diagnostics are sampled at the interface refresh rate rather than at the physics-frame rate.
 - Bounded per-body meshes support distinct surfaces, compact-object emission, selection, and quality-dependent geometry.
 - Trails use fixed-size circular GPU buffers.
 - Procedural stars avoid image downloads.

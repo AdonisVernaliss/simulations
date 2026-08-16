@@ -4,7 +4,7 @@ This document separates the physical model from its visual presentation and stat
 
 ## Scope
 
-Cosmic Sandbox is a deterministic Newtonian N-body simulation in three spatial dimensions, augmented by bounded collision-outcome and screen-space lensing models. The included presets demonstrate orbital mechanics, conservation laws, close encounters, collision regimes, and compact-object interactions. They are not ephemerides, hydrodynamic simulations, or numerical-relativity calculations.
+Cosmic Sandbox is a deterministic Newtonian N-body simulation in three spatial dimensions, augmented by bounded collision-outcome, leading-order tidal, and screen-space lensing models. The included presets demonstrate orbital mechanics, conservation laws, close encounters, collision regimes, and compact-object interactions. They are not ephemerides, hydrodynamic simulations, or numerical-relativity calculations.
 
 There is currently no biological model in the project. No claim of biological validity is made.
 
@@ -94,6 +94,16 @@ The active-nucleus preset places a radio-loud quasar engine in the same N-body s
 
 Neutron stars and pulsars are ordinary massive N-body participants with deliberately enlarged render radii and compact physical radii. The pulsar's 1.337-second spin is converted into the model time unit. Its two cones are an idealized magnetic-axis lighthouse pattern, following the rotating-neutron-star interpretation of pulsations; they are not a radio-emission or plasma-magnetosphere calculation. The double-neutron-star preset is Newtonian and omits gravitational-wave inspiral, tidal deformation, and merger physics.
 
+### Tidal stellar encounter
+
+The tidal-encounter preset compares the leading Newtonian acceleration difference across a body, `Δa ≈ 2GM_BH R / d³`, with its surface self-gravity, `g ≈ Gm/R²`. Their ratio is
+
+```text
+T = 2 M_BH R³ / (m d³).
+```
+
+The renderer begins a volume-preserving elongation toward the black hole as `T` grows; around `T ≈ 1`, the leading tidal gradient rivals the body's self-gravity. This is a physically scaled indicator and an educational spaghettification cue, not a deformable-fluid solution. The N-body solver still advances one center of mass for the star and does not calculate pressure, stellar structure, mass stripping, fallback, or an accretion stream. Close Kerr orbits require a relativistic tidal tensor rather than this Newtonian estimate.
+
 ## Collisions
 
 Contact is determined only by physical radii. Visual enlargement never changes the collision cross-section. Each ordinary impact is classified from its relative velocity, impact geometry, mutual escape velocity, and center-of-mass specific impact energy
@@ -105,11 +115,11 @@ Q_R = ½ μ v_impact² / M_total
 
 The gravity-regime catastrophic threshold is approximated as `1.9` times the uniform-sphere binding energy per unit mass. This follows the fluid-planet material parameter and universal-law structure of Leinhardt and Stewart, but does not implement their full composition-, angle-, and mass-ratio-dependent prescription.
 
-The real-time model resolves five outcomes:
+The real-time model distinguishes five outcomes:
 
 - low-energy accretion: a volume-equivalent remnant conserves mass and linear momentum;
 - hit-and-run: a fast grazing contact applies a momentum-conserving normal impulse and separates both bodies;
-- catastrophic disruption: the universal-law largest-remnant fraction is represented by one remnant plus up to eight resolved, gravitating debris bodies;
+- catastrophic-disruption threshold: both resolved bodies receive a separating impulse, but no debris is invented without a hydrodynamic solver;
 - horizon capture: the captured mass and momentum join the black hole;
 - black-hole merger: the retained mass excludes the stated gravitational-radiation estimate.
 
@@ -121,7 +131,7 @@ For ordinary accretion:
 - volume-equivalent radius is computed from `r³ = r₁³ + r₂³`;
 - kinetic energy is not conserved.
 
-Resolved fragments are a reduced-order mass and velocity distribution, not deformable meshes or shock hydrodynamics. Cratering, material strength, phase changes, atmosphere loss, chemistry, and thermal emission are not calculated.
+For two equal-density, equal-radius worlds this gives twice the mass and `∛2 ≈ 1.26` times the radius. The animated molten material marks a qualitative hot post-impact state; it does not claim a calculated temperature or cooling curve. Cratering, material strength, phase changes, atmosphere loss, chemistry, ejecta, and thermal evolution are not calculated. A credible disruptive impact needs a fluid method such as SPH, PBF, or FLIP rather than a few rigid spheres.
 
 ## Gravitational lensing
 
@@ -132,15 +142,15 @@ The shared 3D scene is post-processed around up to two visible black holes. For 
 β = θ - θ_E² / θ
 ```
 
-where `D_l` is observer-to-lens distance. The actual scene behind the lens is resampled, so stars, trails, planets, and the accretion disk are visibly deflected. Low and balanced quality process one lens; high quality processes two.
+where `D_l` is observer-to-lens distance. The actual scene behind the lens is resampled, so background stars, trails, and planets are visibly deflected. Low and balanced quality process one lens; high quality processes two.
 
-This is physically scaled weak/thin lensing with an explicit shadow mask. Black-hole emission is composited after that pass so the renderer does not incorrectly lens its own disk into giant duplicate Einstein rings. Background stars, trails, planets, and other bodies remain distorted.
+This is physically scaled weak/thin lensing with an explicit shadow mask. Black-hole emission is composited after that pass so the screen-space approximation does not incorrectly lens its own disk into giant duplicate Einstein rings. Background stars, trails, planets, and other bodies remain distorted.
 
-The compact-object overlay is informed by the image anatomy demonstrated by the DNGR renderer for *Interstellar*: a black observable shadow, a thin photon-ring cue, a broad temperature-graded accretion disk with left-right beaming asymmetry, and secondary disk arcs above and below the shadow. It is not DNGR itself. It does not integrate Kerr ray bundles, radiative transfer, polarization, higher-order images, or a physical disk spectrum. The event horizon is inside the observable shadow and is not presented as a directly visible surface. The separate Black Hole Optics laboratory remains the equation-level Schwarzschild null-geodesic reference.
+The compact-object overlay is informed by the image anatomy demonstrated by the DNGR renderer for *Interstellar*: a black observable shadow, a thin photon-ring cue, a three-dimensional temperature-graded accretion disk with line-of-sight beaming asymmetry, and secondary disk-arc cues above and below the shadow. Disk inclination now changes with the camera and turbulent filaments move continuously. It is not DNGR itself. It does not integrate Kerr ray bundles, radiative transfer, polarization, higher-order images, or a physical disk spectrum. The event horizon is inside the observable shadow and is not presented as a directly visible surface. The separate Black Hole Optics laboratory remains the equation-level Schwarzschild null-geodesic reference.
 
 ## Visual model and detail levels
 
-Earth, Venus, Mars, and Jupiter use credited NASA/JPL observational maps. Stars, generic rocky bodies, Saturn, ice giants, atmospheres, and accretion disks use procedural visual materials. These materials communicate object class but are not time-resolved observations.
+Earth, Venus, Mars, and Jupiter use credited NASA/JPL observational maps. Stars, generic rocky bodies, Saturn, ice giants, atmospheres, and accretion disks use procedural visual materials. These materials communicate object class but are not time-resolved observations. The distant background system and galactic star band are non-interacting visual context and are not members of the active N-body state.
 
 Low, balanced, and high detail levels change sphere and ring tessellation, texture anisotropy, background-star count, render pixel ratio, exposure, and the number of simultaneous lenses. Automatic mode reduces those costs when sustained frame time exceeds the budget. The optional field overlay evaluates normalized Newtonian potential contours for the most massive visible bodies; it does not feed back into the force calculation, which always includes every body.
 
@@ -153,7 +163,7 @@ The test suite checks:
 - conservation of total linear momentum;
 - conservation of mass and momentum during collision merging;
 - classification of accretion, hit-and-run, disruption, capture, and black-hole merger regimes;
-- mass and momentum conservation across resolved disruption fragments;
+- inverse-cube scaling of the tidal-stress indicator;
 - physical separation between collision radius and visual radius;
 - Schwarzschild lens-scale dependence on radius, distance, and field of view;
 - finite state values for every preset;
@@ -187,6 +197,8 @@ Open publication does not automatically permit copying code or datasets. Equatio
 - W. C. Swope et al., [A computer simulation method for the calculation of equilibrium constants for the formation of physical clusters of molecules](https://doi.org/10.1063/1.442716), *The Journal of Chemical Physics* 76 (1982), 637–649.
 - W. Dehnen, [Towards optimal softening in three-dimensional N-body codes](https://arxiv.org/abs/astro-ph/0011568), *Monthly Notices of the Royal Astronomical Society* 324 (2001), 273–291.
 - Z. M. Leinhardt and S. T. Stewart, [Collisions Between Gravity-Dominated Bodies: I. Outcome Regimes and Scaling Laws](https://arxiv.org/abs/1106.6084), *The Astrophysical Journal* 745 (2012), 79.
+- M. Ishii, M. Shibata, and Y. Mino, [Black hole tidal problem in the Fermi normal coordinates](https://arxiv.org/abs/gr-qc/0501084), *Physical Review D* 71 (2005), 044017.
+- M. Kesden, [Tidal disruption rate of stars by spinning supermassive black holes](https://arxiv.org/abs/1109.6329), *Physical Review D* 85 (2012), 024037.
 - V. Perlick and O. Y. Tsupko, [Calculating black hole shadows: Review of analytical studies](https://arxiv.org/abs/2105.07101), *Physics Reports* 947 (2022), 1–39.
 - O. James, E. von Tunzelmann, P. Franklin, and K. S. Thorne, [Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar](https://arxiv.org/abs/1502.03808), *Classical and Quantum Gravity* 32 (2015), 065001; DNGR image anatomy and Kerr ray-bundle rendering used as the visual reference, not as the sandbox numerical method.
 - T. Gold, [Rotating Neutron Stars as the Origin of the Pulsating Radio Sources](https://doi.org/10.1038/218731a0), *Nature* 218 (1968), 731–732; rotating-neutron-star lighthouse interpretation used for the schematic pulsar overlay.

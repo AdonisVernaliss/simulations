@@ -29,7 +29,7 @@ This provides an understandable first action for a new user while retaining a sa
 - a radio-loud active nucleus inside the shared gravitational scene;
 - a pulsar with a rotating lighthouse-beam overlay and orbiting companions;
 - a Newtonian double-neutron-star baseline;
-- catastrophic planetary disruption with resolved remnants;
+- a black-hole tidal encounter with a live self-gravity stress indicator;
 - motion around the barycentre of an equal-mass binary;
 - the periodic three-body figure-eight solution;
 - low-energy planetary accretion.
@@ -71,7 +71,7 @@ physical scale of the same normalized Schwarzschild geometry.
 - accretion requires disk or plasma dynamics plus radiation, with the current thin-disk laboratory serving only as an analytic baseline;
 - binary-black-hole waveforms require numerical-relativity or validated surrogate data; the sandbox implements only contact, retained momentum, and a bounded radiated-mass estimate.
 
-The interface does not reuse the light-ray integrator to fake a stellar orbit or add an artistic jet to the thin-disk equations. Resolved collision fragments come from the stated collision-energy model and remain N-body participants; they are not presented as fluid dynamics. Any future hydrodynamic or numerical-relativity mode requires its own model card and tests.
+The interface does not reuse the light-ray integrator to fake a stellar orbit or add an artistic jet to the thin-disk equations. The collision model detects the catastrophic-energy boundary but deliberately omits fragment animation: hydrodynamic debris requires its own material solver, model card, and tests. The tidal scene exposes a leading-order stress ratio and volume-preserving visual deformation without claiming stellar-fluid evolution. Any future hydrodynamic or numerical-relativity mode requires its own model card and tests.
 
 ## Performance rules
 
@@ -79,6 +79,8 @@ The interface does not reuse the light-ray integrator to fake a stellar orbit or
 - Canvas laboratories redraw expensive static layers only after input or resize.
 - Animation overlays use bounded point counts and stop affecting the physical calculation.
 - WebGL assets remain procedural and quality-adaptive.
+- Ordinary scenes bypass compact-object post-processing, and hidden overlays skip their GPU updates.
+- Display-only diagnostics run at their visible refresh rate without reducing physics steps.
 - Hidden documents do not advance expensive simulations.
 - New experiments add no network request and no dependency by default.
 
@@ -87,3 +89,4 @@ The interface does not reuse the light-ray integrator to fake a stellar orbit or
 - [Universe Sandbox](https://www.universesandbox.com/), official feature overview: included physical simulations, editable properties, time control, collisions, and system creation.
 - [Universe Sandbox in the Classroom](https://www.universesandbox.com/education/), official description of hypothesis-driven experimentation through editable properties.
 - [SpaceEngine user manual](https://spaceengine.org/manual/user-manual-0980/), official description of selection, object information, camera binding, navigation, and persistent HUD data.
+- [Universe Sandbox SPH fluid-simulation devlog](https://universesandbox.com/blog/2019/12/sph-devlog-1/), official engineering explanation of why planetary impacts require a continuous-material method for credible stretching, fragmentation, and formation.
