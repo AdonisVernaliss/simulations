@@ -20,7 +20,9 @@ The simulation uses normalized units with a gravitational constant of `G = 1`. M
 
 Preset positions and velocities are barycentric, so their initial center of mass and total linear momentum are effectively zero. Display radii are intentionally enlarged for readability and are also used as collision boundaries. Collision merging conserves total mass and linear momentum; kinetic energy is not conserved during a merge.
 
-The model is educational rather than a source of astronomical ephemerides.
+The Solar System preset uses JPL-derived mass ratios and orbital scales, but deliberately uses circular, coplanar initial orbits. The model is educational rather than a source of astronomical ephemerides.
+
+See [Scientific basis](docs/scientific-basis.md) for the equations, source provenance, automated validation, limitations, and the acceptance policy for future biological models.
 
 ## Performance design
 
@@ -41,12 +43,28 @@ Requirements:
 - npm 10 or newer;
 - a browser with WebGL2 and Web Worker support.
 
-Install and run:
+From the project directory, install exact locked dependencies:
 
 ```sh
 npm ci
+```
+
+Start the development server:
+
+```sh
 npm run dev
 ```
+
+Open the local address printed by Vite, normally `http://127.0.0.1:5173`. Stop the server with `Ctrl+C`.
+
+To verify and preview a production build:
+
+```sh
+npm run check
+npm run preview
+```
+
+The preview command serves the generated `dist/` directory and prints its local address. Run `npm run build` instead of `npm run check` when tests and type checking have already completed.
 
 Available checks:
 
@@ -71,6 +89,7 @@ src/
     ├── simulation.worker.ts      Worker-side simulation loop
     └── worker-protocol.ts        Typed worker messages
 tests/                            Numerical and runtime tests
+docs/                             Scientific model cards and sources
 ```
 
 ## License
