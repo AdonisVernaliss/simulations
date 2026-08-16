@@ -8,7 +8,10 @@ The application uses stable query-based laboratory addresses that work on static
 
 - `?lab=catalog` — laboratory catalog;
 - `?lab=orbital` — Orbital Mechanics Lab;
-- `?lab=atomic` — Atomic Orbitals Lab.
+- `?lab=atomic` — Atomic Orbitals Lab;
+- `?lab=particle` — Particle Track Lab;
+- `?lab=black-hole` — Black Hole Optics Lab;
+- `?lab=quasar` — Quasar Engine Lab.
 
 Opening the root address without a query loads Orbital Mechanics Lab.
 
@@ -56,6 +59,24 @@ The second simulation models selected stationary states of the non-relativistic 
 - orbit, zoom, rotation, and mobile-adaptive controls.
 
 See the [Atomic orbitals model card](docs/atomic-orbitals.md) for equations, constants, sampling details, sources, validation, and limitations.
+
+## Particle Track Lab
+
+The particle laboratory integrates ideal relativistic tracks in a uniform magnetic field. Charge sign sets curvature direction, while evaluated rest mass, kinetic energy, and magnetic-field strength set momentum and radius. Muon and charged-pion tracks also show vacuum survival probability from their mean lifetimes.
+
+See the [Particle track model card](docs/particle-tracks.md) for equations, current Particle Data Group sources, validation, and omitted detector physics.
+
+## Black Hole Optics Lab
+
+The black-hole laboratory integrates null geodesics of Schwarzschild spacetime. It exposes the event horizon, photon sphere, critical impact parameter, capture boundary, weak-field limit, and conversion from normalized geometry to physical scale.
+
+See the [Black hole optics model card](docs/black-hole-optics.md) for the geodesic equation, exact reference scales, sources, validation, and the distinction between a coordinate diagram and an observed shadow.
+
+## Quasar Engine Lab
+
+The quasar laboratory computes a steady zero-torque thin-disk baseline: Eddington luminosity, accretion rate, radial dissipation, effective temperature, and the local Wien peak. The false-colour disk is explicitly separated from relativistic transfer, plasma, corona, jet, and GRMHD models.
+
+See the [Quasar thin-disk model card](docs/thin-disk.md) for equations, assumptions, sources, validation, and the regimes where the approximation fails.
 
 ## Performance design
 
@@ -118,6 +139,9 @@ src/
 ├── catalog.ts                    Laboratory index and research workspaces
 └── simulations/
     ├── atomic-lab/               Hydrogen model, sampler, renderer, and interface
+    ├── black-hole-lab/           Schwarzschild ray model and optics interface
+    ├── particle-lab/             Relativistic track model and detector view
+    ├── quasar-lab/               Thin-disk model and temperature view
     └── orbital-lab/
         ├── model/                Physics engine and presets
         ├── renderer/             WebGL scene and reusable buffers
