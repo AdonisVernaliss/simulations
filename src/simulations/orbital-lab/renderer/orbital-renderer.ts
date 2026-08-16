@@ -10,6 +10,7 @@ import {
   InstancedMesh,
   Line,
   LineBasicMaterial,
+  LineSegments,
   Matrix4,
   MeshBasicMaterial,
   PerspectiveCamera,
@@ -127,6 +128,11 @@ export class OrbitalRenderer {
   private bodyMesh: InstancedMesh | undefined;
   private glowMesh: InstancedMesh | undefined;
   private trails: BodyTrail[] = [];
+  private velocityVectors: LineSegments | undefined;
+  private previousPositions = new Float32Array();
+  private previousTime = 0;
+  private velocityScale = 0.1;
+  private velocityVectorsVisible = false;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     this.renderer = new WebGLRenderer({
@@ -196,6 +202,12 @@ export class OrbitalRenderer {
       this.scene.add(trail.line);
       return trail;
     });
+    this.velocityVectors = this.createVelocityVectors(bodies);
+    this.velocityVectors.visible = this.velocityVectorsVisible;
+    this.scene.add(this.velocityVectors);
+    this.previousPositions = new Float32Array(positions);
+    this.previousTime = 0;
+    this.velocityScale = cameraDistance * 0.032;
 
     const instanceColors = new Float32Array(bodies.length * 3);
     bodies.forEach((body, index) => {
@@ -215,6 +227,8 @@ export class OrbitalRenderer {
     if (this.bodyMesh === undefined || this.glowMesh === undefined) {
       return;
     }
+
+    this.updateVelocityVectors(positions, time);
 
     for (let bodyIndex = 0; bodyIndex < this.bodies.length; bodyIndex += 1) {
       const offset = bodyIndex * 3;
@@ -236,6 +250,8 @@ export class OrbitalRenderer {
 
     this.bodyMesh.instanceMatrix.needsUpdate = true;
     this.glowMesh.instanceMatrix.needsUpdate = true;
+    this.previousPositions.set(positions);
+    this.previousTime = time;
   }
 
   render(): void {
@@ -250,6 +266,13 @@ export class OrbitalRenderer {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, profile.maximumPixelRatio));
     this.starField.geometry.setDrawRange(0, profile.starCount);
     this.resize();
+  }
+
+  setVelocityVectorsVisible(visible: boolean): void {
+    this.velocityVectorsVisible = visible;
+    if (this.velocityVectors !== undefined) {
+      this.velocityVectors.visible = visible;
+    }
   }
 
   focus(distance: number): void {
@@ -301,6 +324,16 @@ export class OrbitalRenderer {
     }
 
     this.trails = [];
+
+    if (this.velocityVectors !== undefined) {
+      this.scene.remove(this.velocityVectors);
+      this.velocityVectors.geometry.dispose();
+      (this.velocityVectors.material as LineBasicMaterial).dispose();
+      this.velocityVectors = undefined;
+    }
+
+    this.previousPositions = new Float32Array();
+    this.previousTime = 0;
   }
 
   private createReferenceGrid(): GridHelper {
@@ -346,5 +379,62 @@ export class OrbitalRenderer {
     });
 
     return new Points(geometry, material);
+  }
+
+  private createVelocityVectors(bodies: readonly BodyMetadata[]): LineSegments {
+    const positions = new Float32Array(bodies.length * 2 * 3);
+    const colors = new Float32Array(bodies.length * 2 * 3);
+
+    bodies.forEach((body, bodyIndex) => {
+      this.color.set(body.color);
+      this.color.toArray(colors, bodyIndex * 6);
+      this.color.lerp(new Color(0xffffff), 0.48);
+      this.color.toArray(colors, bodyIndex * 6 + 3);
+    });
+
+    const geometry = new BufferGeometry();
+    const positionAttribute = new BufferAttribute(positions, 3);
+    positionAttribute.setUsage(DynamicDrawUsage);
+    geometry.setAttribute('position', positionAttribute);
+    geometry.setAttribute('color', new BufferAttribute(colors, 3));
+
+    const material = new LineBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.86,
+      depthWrite: false,
+    });
+    const vectors = new LineSegments(geometry, material);
+    vectors.frustumCulled = false;
+    return vectors;
+  }
+
+  private updateVelocityVectors(positions: Float32Array, time: number): void {
+    if (
+      this.velocityVectors === undefined ||
+      positions.length !== this.previousPositions.length ||
+      time <= this.previousTime
+    ) {
+      return;
+    }
+
+    const elapsedTime = time - this.previousTime;
+    const attribute = this.velocityVectors.geometry.getAttribute('position') as BufferAttribute;
+    const vectorPositions = attribute.array as Float32Array;
+
+    for (let bodyIndex = 0; bodyIndex < this.bodies.length; bodyIndex += 1) {
+      const sourceOffset = bodyIndex * 3;
+      const vectorOffset = bodyIndex * 6;
+
+      for (let component = 0; component < 3; component += 1) {
+        const position = positions[sourceOffset + component] ?? 0;
+        const previousPosition = this.previousPositions[sourceOffset + component] ?? position;
+        vectorPositions[vectorOffset + component] = position;
+        vectorPositions[vectorOffset + component + 3] =
+          position + ((position - previousPosition) / elapsedTime) * this.velocityScale;
+      }
+    }
+
+    attribute.needsUpdate = true;
   }
 }

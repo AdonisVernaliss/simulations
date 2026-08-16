@@ -35,6 +35,7 @@ export class OrbitalLab {
   private readonly pauseButton: HTMLButtonElement;
   private readonly resetButton: HTMLButtonElement;
   private readonly addBodyButton: HTMLButtonElement;
+  private readonly vectorsButton: HTMLButtonElement;
   private readonly bodyDialog: HTMLDialogElement;
   private readonly bodyForm: HTMLFormElement;
   private readonly bodyFormError: HTMLElement;
@@ -62,6 +63,7 @@ export class OrbitalLab {
   private fastFrameTime = 0;
   private bodyCount = 0;
   private customBodySequence = 0;
+  private vectorsVisible = false;
 
   constructor(root: HTMLElement) {
     root.innerHTML = this.createMarkup();
@@ -72,6 +74,7 @@ export class OrbitalLab {
     this.pauseButton = requireElement(root, '[data-pause]');
     this.resetButton = requireElement(root, '[data-reset]');
     this.addBodyButton = requireElement(root, '[data-add-body]');
+    this.vectorsButton = requireElement(root, '[data-vectors]');
     this.bodyDialog = requireElement(root, '[data-body-dialog]');
     this.bodyForm = requireElement(root, '[data-body-form]');
     this.bodyFormError = requireElement(root, '[data-body-error]');
@@ -199,6 +202,12 @@ export class OrbitalLab {
       this.bodyDialog.showModal();
       nameInput.focus();
       nameInput.select();
+    });
+
+    this.vectorsButton.addEventListener('click', () => {
+      this.vectorsVisible = !this.vectorsVisible;
+      this.vectorsButton.setAttribute('aria-pressed', String(this.vectorsVisible));
+      this.renderer.setVelocityVectorsVisible(this.vectorsVisible);
     });
 
     this.bodyForm.addEventListener('submit', (event) => {
@@ -420,6 +429,7 @@ export class OrbitalLab {
               </button>
               <button class="button" type="button" data-reset>Reset</button>
               <button class="button" type="button" data-add-body>Add body</button>
+              <button class="button" type="button" data-vectors aria-pressed="false">Vectors</button>
             </div>
 
             <label class="field">
