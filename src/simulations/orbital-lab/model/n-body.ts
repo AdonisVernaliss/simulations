@@ -2,12 +2,15 @@ import type {
   BodyDefinition,
   BodyKind,
   BodySurface,
+  CollisionEvent,
   SimulationDiagnostics,
   SimulationOptions,
   Vector3Tuple,
 } from './types';
+import { analyzeCollision, type CollisionAnalysis } from './collision-model';
 
 const COMPONENTS_PER_BODY = 3;
+const MAXIMUM_INTERACTIVE_BODIES = 128;
 
 const assertFiniteVector = (value: Vector3Tuple, label: string): void => {
   if (value.some((component) => !Number.isFinite(component))) {
@@ -67,6 +70,8 @@ export class NBodySimulation {
   private accelerationData = new Float64Array();
   private nextAccelerationData = new Float64Array();
   private elapsedTime = 0;
+  private collisionSequence = 0;
+  private lastCollisionEventData: CollisionEvent | undefined;
 
   constructor(bodies: readonly BodyDefinition[], options: SimulationOptions = {}) {
     this.gravitationalConstant = options.gravitationalConstant ?? 1;
@@ -138,6 +143,10 @@ export class NBodySimulation {
 
   get velocities(): Float64Array {
     return this.velocityData;
+  }
+
+  get lastCollisionEvent(): CollisionEvent | undefined {
+    return this.lastCollisionEventData;
   }
 
   addBody(body: BodyDefinition): void {
@@ -317,35 +326,66 @@ export class NBodySimulation {
   }
 
   private resolveCollisions(): void {
-    let collisionFound = true;
+    for (let bodyIndex = 0; bodyIndex < this.count; bodyIndex += 1) {
+      const offset = bodyIndex * COMPONENTS_PER_BODY;
 
-    while (collisionFound) {
-      collisionFound = false;
+      for (let otherIndex = bodyIndex + 1; otherIndex < this.count; otherIndex += 1) {
+        const otherOffset = otherIndex * COMPONENTS_PER_BODY;
+        const relativePosition: Vector3Tuple = [
+          this.positionData[otherOffset]! - this.positionData[offset]!,
+          this.positionData[otherOffset + 1]! - this.positionData[offset + 1]!,
+          this.positionData[otherOffset + 2]! - this.positionData[offset + 2]!,
+        ];
+        const combinedRadius = this.radiusData[bodyIndex]! + this.radiusData[otherIndex]!;
 
-      collisionSearch: for (let bodyIndex = 0; bodyIndex < this.count; bodyIndex += 1) {
-        const offset = bodyIndex * COMPONENTS_PER_BODY;
-
-        for (let otherIndex = bodyIndex + 1; otherIndex < this.count; otherIndex += 1) {
-          const otherOffset = otherIndex * COMPONENTS_PER_BODY;
-          const deltaX = this.positionData[otherOffset]! - this.positionData[offset]!;
-          const deltaY = this.positionData[otherOffset + 1]! - this.positionData[offset + 1]!;
-          const deltaZ = this.positionData[otherOffset + 2]! - this.positionData[offset + 2]!;
-          const combinedRadius = this.radiusData[bodyIndex]! + this.radiusData[otherIndex]!;
-
-          if (deltaX ** 2 + deltaY ** 2 + deltaZ ** 2 <= combinedRadius ** 2) {
-            this.mergePair(bodyIndex, otherIndex);
-            collisionFound = true;
-            break collisionSearch;
-          }
+        if (Math.hypot(...relativePosition) > combinedRadius) {
+          continue;
         }
+
+        const analysis = analyzeCollision({
+          firstMass: this.massData[bodyIndex]!,
+          secondMass: this.massData[otherIndex]!,
+          firstRadius: this.radiusData[bodyIndex]!,
+          secondRadius: this.radiusData[otherIndex]!,
+          firstKind: this.kindsData[bodyIndex]!,
+          secondKind: this.kindsData[otherIndex]!,
+          relativePosition,
+          relativeVelocity: [
+            this.velocityData[otherOffset]! - this.velocityData[offset]!,
+            this.velocityData[otherOffset + 1]! - this.velocityData[offset + 1]!,
+            this.velocityData[otherOffset + 2]! - this.velocityData[offset + 2]!,
+          ],
+          gravitationalConstant: this.gravitationalConstant,
+        });
+        const participants: readonly [string, string] = [
+          this.idsData[bodyIndex]!,
+          this.idsData[otherIndex]!,
+        ];
+
+        if (analysis.outcome === 'hit-and-run') {
+          this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
+          this.recordCollision(participants, analysis, 0);
+        } else if (analysis.outcome === 'disruption') {
+          const fragmentCount = this.disruptPair(bodyIndex, otherIndex, analysis);
+          this.recordCollision(participants, analysis, fragmentCount);
+        } else {
+          this.recordCollision(participants, analysis, 1);
+          this.mergePair(bodyIndex, otherIndex, analysis);
+        }
+        return;
       }
     }
   }
 
-  private mergePair(firstIndex: number, secondIndex: number): void {
+  private mergePair(
+    firstIndex: number,
+    secondIndex: number,
+    analysis?: CollisionAnalysis,
+  ): void {
     const firstMass = this.massData[firstIndex]!;
     const secondMass = this.massData[secondIndex]!;
     const combinedMass = firstMass + secondMass;
+    const finalMass = combinedMass - (analysis?.radiatedMass ?? 0);
     const firstOffset = firstIndex * COMPONENTS_PER_BODY;
     const secondOffset = secondIndex * COMPONENTS_PER_BODY;
     const mergedPosition: number[] = [];
@@ -366,7 +406,7 @@ export class NBodySimulation {
       mergedVelocity.push(
         (this.velocityData[firstOffset + component]! * firstMass +
           this.velocityData[secondOffset + component]! * secondMass) /
-          combinedMass,
+          finalMass,
       );
     }
 
@@ -375,10 +415,10 @@ export class NBodySimulation {
       name: `${this.namesData[firstIndex]} + ${this.namesData[secondIndex]}`,
       kind: mergedKind,
       surface: mergedKind === 'black-hole' ? 'none' : this.surfacesData[dominantIndex]!,
-      mass: combinedMass,
+      mass: finalMass,
       radius:
         mergedKind === 'black-hole'
-          ? this.getMergedBlackHoleRadius(firstIndex, secondIndex)
+          ? this.getMergedBlackHoleRadius(firstIndex, secondIndex, finalMass)
           : Math.cbrt(
               this.radiusData[firstIndex]! ** 3 + this.radiusData[secondIndex]! ** 3,
             ),
@@ -427,6 +467,191 @@ export class NBodySimulation {
     this.replaceBodies(remainingBodies);
   }
 
+  private resolveHitAndRun(
+    firstIndex: number,
+    secondIndex: number,
+    relativePosition: Vector3Tuple,
+  ): void {
+    const firstOffset = firstIndex * COMPONENTS_PER_BODY;
+    const secondOffset = secondIndex * COMPONENTS_PER_BODY;
+    const distance = Math.max(Math.hypot(...relativePosition), Number.EPSILON);
+    const normal = relativePosition.map((component) => component / distance) as unknown as Vector3Tuple;
+    const relativeVelocity: Vector3Tuple = [
+      this.velocityData[secondOffset]! - this.velocityData[firstOffset]!,
+      this.velocityData[secondOffset + 1]! - this.velocityData[firstOffset + 1]!,
+      this.velocityData[secondOffset + 2]! - this.velocityData[firstOffset + 2]!,
+    ];
+    const normalSpeed =
+      relativeVelocity[0] * normal[0] +
+      relativeVelocity[1] * normal[1] +
+      relativeVelocity[2] * normal[2];
+    const firstMass = this.massData[firstIndex]!;
+    const secondMass = this.massData[secondIndex]!;
+
+    if (normalSpeed < 0) {
+      const restitution = 0.22;
+      const impulse =
+        (-(1 + restitution) * normalSpeed) / (1 / firstMass + 1 / secondMass);
+      for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
+        this.velocityData[firstOffset + component] =
+          this.velocityData[firstOffset + component]! -
+          (impulse * normal[component]!) / firstMass;
+        this.velocityData[secondOffset + component] =
+          this.velocityData[secondOffset + component]! +
+          (impulse * normal[component]!) / secondMass;
+      }
+    }
+
+    const targetDistance =
+      (this.radiusData[firstIndex]! + this.radiusData[secondIndex]!) * 1.0001;
+    const overlap = Math.max(0, targetDistance - distance);
+    const totalMass = firstMass + secondMass;
+    for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
+      this.positionData[firstOffset + component] =
+        this.positionData[firstOffset + component]! -
+        normal[component]! * overlap * (secondMass / totalMass);
+      this.positionData[secondOffset + component] =
+        this.positionData[secondOffset + component]! +
+        normal[component]! * overlap * (firstMass / totalMass);
+    }
+    this.computeAccelerations(this.accelerationData);
+  }
+
+  private disruptPair(
+    firstIndex: number,
+    secondIndex: number,
+    analysis: CollisionAnalysis,
+  ): number {
+    const firstMass = this.massData[firstIndex]!;
+    const secondMass = this.massData[secondIndex]!;
+    const totalMass = firstMass + secondMass;
+    const firstOffset = firstIndex * COMPONENTS_PER_BODY;
+    const secondOffset = secondIndex * COMPONENTS_PER_BODY;
+    const centerPosition: number[] = [];
+    const centerVelocity: number[] = [];
+
+    for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
+      centerPosition.push(
+        (this.positionData[firstOffset + component]! * firstMass +
+          this.positionData[secondOffset + component]! * secondMass) /
+          totalMass,
+      );
+      centerVelocity.push(
+        (this.velocityData[firstOffset + component]! * firstMass +
+          this.velocityData[secondOffset + component]! * secondMass) /
+          totalMass,
+      );
+    }
+
+    const largestFraction = Math.max(0.1, Math.min(0.5, 1 - 0.5 * analysis.energyRatio));
+    const largestMass = totalMass * largestFraction;
+    const availableSlots =
+      MAXIMUM_INTERACTIVE_BODIES - (this.count - 2) - 1;
+    const debrisCount = Math.max(1, Math.min(8, availableSlots));
+    const debrisMass = (totalMass - largestMass) / debrisCount;
+    const combinedRadius = Math.cbrt(
+      this.radiusData[firstIndex]! ** 3 + this.radiusData[secondIndex]! ** 3,
+    );
+    const combinedRenderRadius = Math.cbrt(
+      this.renderRadiusData[firstIndex]! ** 3 + this.renderRadiusData[secondIndex]! ** 3,
+    );
+    const dominantIndex = firstMass >= secondMass ? firstIndex : secondIndex;
+    const eventSequence = this.collisionSequence + 1;
+    const remnants: BodyDefinition[] = [
+      {
+        id: `remnant-${eventSequence}`,
+        name: 'Largest remnant',
+        kind: this.kindsData[dominantIndex]!,
+        surface: 'procedural',
+        mass: largestMass,
+        radius: combinedRadius * Math.cbrt(largestFraction),
+        renderRadius: combinedRenderRadius * Math.cbrt(largestFraction),
+        color: this.colorsData[dominantIndex]!,
+        axialTilt: this.axialTiltData[dominantIndex]!,
+        rotationRate: this.rotationRateData[dominantIndex]!,
+        position: [centerPosition[0]!, centerPosition[1]!, centerPosition[2]!],
+        velocity: [centerVelocity[0]!, centerVelocity[1]!, centerVelocity[2]!],
+      },
+    ];
+    const fragmentFraction = debrisMass / totalMass;
+    const ejectionSpeed = Math.max(
+      analysis.mutualEscapeSpeed * 0.32,
+      analysis.impactSpeed * 0.12,
+    );
+    const separation = combinedRadius * 3.2;
+
+    if (debrisCount === 1) {
+      const recoilScale = debrisMass / largestMass;
+      remnants[0] = {
+        ...remnants[0]!,
+        position: [
+          centerPosition[0]! - separation * recoilScale,
+          centerPosition[1]!,
+          centerPosition[2]!,
+        ],
+        velocity: [
+          centerVelocity[0]! - ejectionSpeed * recoilScale,
+          centerVelocity[1]!,
+          centerVelocity[2]!,
+        ],
+      };
+    }
+
+    for (let fragmentIndex = 0; fragmentIndex < debrisCount; fragmentIndex += 1) {
+      const angle = (fragmentIndex / debrisCount) * Math.PI * 2;
+      const directionX = Math.cos(angle);
+      const directionY = Math.sin(angle);
+      remnants.push({
+        id: `fragment-${eventSequence}-${fragmentIndex + 1}`,
+        name: `Fragment ${fragmentIndex + 1}`,
+        kind: 'rocky',
+        surface: 'procedural',
+        mass: debrisMass,
+        radius: combinedRadius * Math.cbrt(fragmentFraction),
+        renderRadius: combinedRenderRadius * Math.cbrt(fragmentFraction) * 0.82,
+        color: this.colorsData[dominantIndex]!,
+        axialTilt: angle,
+        rotationRate: (fragmentIndex % 2 === 0 ? 1 : -1) * (2.4 + fragmentIndex * 0.31),
+        position: [
+          centerPosition[0]! + directionX * separation,
+          centerPosition[1]! + directionY * separation,
+          centerPosition[2]!,
+        ],
+        velocity: [
+          centerVelocity[0]! + directionX * ejectionSpeed,
+          centerVelocity[1]! + directionY * ejectionSpeed,
+          centerVelocity[2]!,
+        ],
+      });
+    }
+
+    const bodies = this.createBodyDefinitions().filter(
+      (_, bodyIndex) => bodyIndex !== firstIndex && bodyIndex !== secondIndex,
+    );
+    this.replaceBodies([...bodies, ...remnants]);
+    return remnants.length;
+  }
+
+  private recordCollision(
+    participants: readonly [string, string],
+    analysis: CollisionAnalysis,
+    fragmentCount: number,
+  ): void {
+    this.collisionSequence += 1;
+    this.lastCollisionEventData = {
+      sequence: this.collisionSequence,
+      time: this.elapsedTime,
+      outcome: analysis.outcome,
+      participants,
+      impactSpeed: analysis.impactSpeed,
+      mutualEscapeSpeed: analysis.mutualEscapeSpeed,
+      specificImpactEnergy: analysis.specificImpactEnergy,
+      disruptionThreshold: analysis.disruptionThreshold,
+      fragmentCount,
+      radiatedMass: analysis.radiatedMass,
+    };
+  }
+
   private createBodyDefinitions(): BodyDefinition[] {
     const bodies: BodyDefinition[] = [];
 
@@ -459,14 +684,25 @@ export class NBodySimulation {
     return bodies;
   }
 
-  private getMergedBlackHoleRadius(firstIndex: number, secondIndex: number): number {
+  private getMergedBlackHoleRadius(
+    firstIndex: number,
+    secondIndex: number,
+    finalMass: number,
+  ): number {
     const firstIsBlackHole = this.kindsData[firstIndex] === 'black-hole';
     const secondIsBlackHole = this.kindsData[secondIndex] === 'black-hole';
 
     if (firstIsBlackHole && secondIsBlackHole) {
-      return this.radiusData[firstIndex]! + this.radiusData[secondIndex]!;
+      const combinedMass = this.massData[firstIndex]! + this.massData[secondIndex]!;
+      return (
+        (this.radiusData[firstIndex]! + this.radiusData[secondIndex]!) *
+        (finalMass / combinedMass)
+      );
     }
 
-    return firstIsBlackHole ? this.radiusData[firstIndex]! : this.radiusData[secondIndex]!;
+    const blackHoleIndex = firstIsBlackHole ? firstIndex : secondIndex;
+    return (
+      this.radiusData[blackHoleIndex]! * (finalMass / this.massData[blackHoleIndex]!)
+    );
   }
 }

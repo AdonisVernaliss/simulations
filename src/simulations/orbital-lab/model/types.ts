@@ -55,3 +55,23 @@ export interface SimulationDiagnostics {
   readonly angularMomentum: Vector3Tuple;
   readonly centerOfMass: Vector3Tuple;
 }
+
+export type CollisionOutcome =
+  | 'merge'
+  | 'hit-and-run'
+  | 'disruption'
+  | 'capture'
+  | 'black-hole-merger';
+
+export interface CollisionEvent {
+  readonly sequence: number;
+  readonly time: number;
+  readonly outcome: CollisionOutcome;
+  readonly participants: readonly [string, string];
+  readonly impactSpeed: number;
+  readonly mutualEscapeSpeed: number;
+  readonly specificImpactEnergy: number;
+  readonly disruptionThreshold: number;
+  readonly fragmentCount: number;
+  readonly radiatedMass: number;
+}

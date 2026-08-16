@@ -197,4 +197,111 @@ describe('NBodySimulation', () => {
     expect(simulation.positions).toHaveLength(9);
     expect(simulation.time).toBeCloseTo(0.01, 12);
   });
+
+  it('resolves a fast grazing impact as hit-and-run without losing momentum', () => {
+    const simulation = new NBodySimulation(
+      [
+        {
+          id: 'grazing-a',
+          name: 'Grazing A',
+          mass: 1,
+          radius: 0.2,
+          color: '#ffffff',
+          position: [-0.19, 0, 0],
+          velocity: [0.5, 2, 0],
+        },
+        {
+          id: 'grazing-b',
+          name: 'Grazing B',
+          mass: 1,
+          radius: 0.2,
+          color: '#999999',
+          position: [0.19, 0, 0],
+          velocity: [-0.5, -2, 0],
+        },
+      ],
+      { collisions: true, gravitationalConstant: 1 },
+    );
+
+    simulation.step(0.0001);
+
+    expect(simulation.count).toBe(2);
+    expect(simulation.lastCollisionEvent?.outcome).toBe('hit-and-run');
+    expect(Math.hypot(...simulation.getDiagnostics().linearMomentum)).toBeLessThan(1e-12);
+  });
+
+  it('creates mass- and momentum-conserving remnants after catastrophic disruption', () => {
+    const simulation = new NBodySimulation(
+      [
+        {
+          id: 'fast-a',
+          name: 'Fast A',
+          kind: 'rocky',
+          mass: 1,
+          radius: 0.2,
+          renderRadius: 0.2,
+          color: '#ffffff',
+          position: [-0.19, 0, 0],
+          velocity: [6, 0, 0],
+        },
+        {
+          id: 'fast-b',
+          name: 'Fast B',
+          kind: 'rocky',
+          mass: 1,
+          radius: 0.2,
+          renderRadius: 0.2,
+          color: '#999999',
+          position: [0.19, 0, 0],
+          velocity: [-6, 0, 0],
+        },
+      ],
+      { collisions: true, gravitationalConstant: 1 },
+    );
+
+    simulation.step(0.0001);
+
+    expect(simulation.lastCollisionEvent?.outcome).toBe('disruption');
+    expect(simulation.count).toBeGreaterThan(2);
+    expect(Array.from(simulation.masses).reduce((sum, mass) => sum + mass, 0)).toBeCloseTo(2, 12);
+    expect(Math.hypot(...simulation.getDiagnostics().linearMomentum)).toBeLessThan(1e-10);
+  });
+
+  it('captures an intersecting body without changing the black-hole identity', () => {
+    const simulation = new NBodySimulation(
+      [
+        {
+          id: 'hole',
+          name: 'Black hole',
+          kind: 'black-hole',
+          surface: 'none',
+          mass: 5,
+          radius: 0.2,
+          renderRadius: 0.3,
+          color: '#ff9955',
+          position: [0, 0, 0],
+          velocity: [0, 0, 0],
+        },
+        {
+          id: 'world',
+          name: 'World',
+          kind: 'terrestrial',
+          mass: 1,
+          radius: 0.1,
+          renderRadius: 0.15,
+          color: '#5599ff',
+          position: [0.1, 0, 0],
+          velocity: [0, 0, 0],
+        },
+      ],
+      { collisions: true, gravitationalConstant: 0 },
+    );
+
+    simulation.step(0.001);
+
+    expect(simulation.count).toBe(1);
+    expect(simulation.kinds[0]).toBe('black-hole');
+    expect(simulation.masses[0]).toBe(6);
+    expect(simulation.lastCollisionEvent?.outcome).toBe('capture');
+  });
 });
