@@ -100,6 +100,9 @@ const requireElement = <ElementType extends Element>(
 const formatNumber = (value: number, maximumFractionDigits = 2): string =>
   new Intl.NumberFormat('en', { maximumFractionDigits }).format(value);
 
+const formatMeasurement = (value: number): string =>
+  Math.abs(value) < 0.001 && value !== 0 ? value.toExponential(3) : formatNumber(value, 4);
+
 export class OrbitalLab {
   private readonly canvas: HTMLCanvasElement;
   private readonly renderer: OrbitalRenderer;
@@ -578,7 +581,7 @@ export class OrbitalLab {
       this.selectedNameElement.textContent = selection.body.name;
       this.selectedTypeElement.textContent = selection.body.kind.replaceAll('-', ' ');
       this.selectedMassElement.textContent = selection.body.mass.toExponential(4);
-      this.selectedRadiusElement.textContent = formatNumber(selection.body.radius, 4);
+      this.selectedRadiusElement.textContent = formatMeasurement(selection.body.radius);
       this.selectedRenderRadiusElement.textContent = formatNumber(
         selection.body.renderRadius,
         4,

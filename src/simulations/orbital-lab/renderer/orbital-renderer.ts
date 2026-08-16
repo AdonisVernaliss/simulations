@@ -168,6 +168,7 @@ export class OrbitalRenderer {
   private systemCameraDistance = 10;
   private pointerDownX = 0;
   private pointerDownY = 0;
+  private previousRenderTime = performance.now();
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -297,7 +298,10 @@ export class OrbitalRenderer {
   }
 
   render(): void {
-    this.animateFocus();
+    const now = performance.now();
+    const elapsedSeconds = Math.min((now - this.previousRenderTime) / 1_000, 0.25);
+    this.previousRenderTime = now;
+    this.animateFocus(elapsedSeconds);
     if (this.selectionRing.visible) {
       this.selectionRing.lookAt(this.camera.position);
     }
@@ -537,7 +541,7 @@ export class OrbitalRenderer {
     );
   }
 
-  private animateFocus(): void {
+  private animateFocus(elapsedSeconds: number): void {
     if (this.followedBodyIndex === undefined) {
       return;
     }
@@ -561,8 +565,8 @@ export class OrbitalRenderer {
       this.focusDirection.set(0, -1, 0.65);
     }
     this.focusDirection.normalize().multiplyScalar(this.focusDistance).add(this.focusTarget);
-    this.camera.position.lerp(this.focusDirection, 0.095);
-    this.controls.target.lerp(this.focusTarget, 0.14);
+    this.camera.position.lerp(this.focusDirection, 1 - Math.exp(-7.2 * elapsedSeconds));
+    this.controls.target.lerp(this.focusTarget, 1 - Math.exp(-10.5 * elapsedSeconds));
 
     if (
       this.camera.position.distanceTo(this.focusDirection) < this.focusDistance * 0.015 &&
