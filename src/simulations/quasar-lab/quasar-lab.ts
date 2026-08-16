@@ -7,12 +7,57 @@ import {
   THIN_DISK_EFFICIENCY,
   getAccretionRate,
   getEddingtonLuminosity,
+  getKeplerianPeriod,
   getPeakDiskTemperature,
   getWienPeakWavelength,
 } from './model/thin-disk';
 import { ThinDiskRenderer } from './renderer/thin-disk-renderer';
 
 const ASTRONOMICAL_UNIT_METRES = 149_597_870_700;
+
+interface QuasarExperiment {
+  readonly id: string;
+  readonly label: string;
+  readonly title: string;
+  readonly observation: string;
+  readonly massExponent: number;
+  readonly eddingtonRatio: number;
+}
+
+const QUASAR_EXPERIMENTS: readonly QuasarExperiment[] = [
+  {
+    id: 'reference',
+    label: 'Reference',
+    title: 'A reference luminous quasar',
+    observation: 'Use this as the baseline, then compare one physical change at a time.',
+    massExponent: 8.5,
+    eddingtonRatio: 0.2,
+  },
+  {
+    id: 'hotter',
+    label: 'Smaller · hotter',
+    title: 'Why smaller holes have hotter disks',
+    observation: 'At the same Eddington ratio, lowering mass raises temperature as M⁻¹⁄⁴.',
+    massExponent: 7,
+    eddingtonRatio: 0.2,
+  },
+  {
+    id: 'cooler',
+    label: 'Giant · cooler',
+    title: 'A giant hole shifts the thermal peak',
+    observation: 'The larger physical disk is cooler and its hottest annulus peaks at a longer wavelength.',
+    massExponent: 10,
+    eddingtonRatio: 0.2,
+  },
+  {
+    id: 'feeding',
+    label: 'Feed faster',
+    title: 'Approach the Eddington boundary',
+    observation: 'Five times the luminosity raises temperature only by 5¹⁄⁴; thin-disk assumptions are now strained.',
+    massExponent: 8.5,
+    eddingtonRatio: 1,
+  },
+] as const;
 
 const requireElement = <ElementType extends Element>(
   root: ParentNode,
@@ -35,6 +80,19 @@ const formatDistance = (metres: number): string =>
     ? `${formatNumber(metres / ASTRONOMICAL_UNIT_METRES, 4)} au`
     : `${formatNumber(metres / 1_000, 1)} km`;
 
+const formatDuration = (seconds: number): string => {
+  if (seconds < 3_600) {
+    return `${formatNumber(seconds / 60, 1)} min`;
+  }
+  if (seconds < 86_400) {
+    return `${formatNumber(seconds / 3_600, 1)} h`;
+  }
+  if (seconds < 31_557_600) {
+    return `${formatNumber(seconds / 86_400, 2)} d`;
+  }
+  return `${formatNumber(seconds / 31_557_600, 2)} yr`;
+};
+
 export class QuasarLab {
   private readonly renderer: ThinDiskRenderer;
   private readonly massInput: HTMLInputElement;
@@ -46,6 +104,10 @@ export class QuasarLab {
   private readonly temperatureValue: HTMLElement;
   private readonly wavelengthValue: HTMLElement;
   private readonly innerRadiusValue: HTMLElement;
+  private readonly periodValue: HTMLElement;
+  private readonly experimentTitle: HTMLElement;
+  private readonly experimentObservation: HTMLElement;
+  private readonly experimentButtons: readonly HTMLButtonElement[];
 
   constructor(root: HTMLElement) {
     root.innerHTML = this.createMarkup();
@@ -58,6 +120,10 @@ export class QuasarLab {
     this.temperatureValue = requireElement(root, '[data-peak-temperature]');
     this.wavelengthValue = requireElement(root, '[data-peak-wavelength]');
     this.innerRadiusValue = requireElement(root, '[data-inner-radius]');
+    this.periodValue = requireElement(root, '[data-orbital-period]');
+    this.experimentTitle = requireElement(root, '[data-experiment-title]');
+    this.experimentObservation = requireElement(root, '[data-experiment-observation]');
+    this.experimentButtons = [...root.querySelectorAll<HTMLButtonElement>('[data-experiment]')];
     this.renderer = new ThinDiskRenderer(
       requireElement<HTMLCanvasElement>(root, '[data-thin-disk-canvas]'),
     );
@@ -65,7 +131,8 @@ export class QuasarLab {
   }
 
   start(): void {
-    this.updateModel();
+    this.activateExperiment('reference');
+    this.renderer.start();
   }
 
   destroy(): void {
@@ -73,15 +140,36 @@ export class QuasarLab {
   }
 
   private bindControls(root: HTMLElement): void {
-    this.massInput.addEventListener('input', () => this.updateModel());
-    this.ratioInput.addEventListener('input', () => this.updateModel());
-    root.querySelectorAll<HTMLButtonElement>('[data-mass-preset]').forEach((button) => {
+    this.massInput.addEventListener('input', () => this.activateFreeMode());
+    this.ratioInput.addEventListener('input', () => this.activateFreeMode());
+    root.querySelectorAll<HTMLButtonElement>('[data-experiment]').forEach((button) => {
       button.addEventListener('click', () => {
-        const exponent = Number(button.dataset.massPreset);
-        this.massInput.value = String(exponent);
-        this.updateModel();
+        this.activateExperiment(button.dataset.experiment ?? 'reference');
       });
     });
+  }
+
+  private activateExperiment(id: string): void {
+    const experiment = QUASAR_EXPERIMENTS.find((candidate) => candidate.id === id);
+    if (experiment === undefined) {
+      return;
+    }
+    this.massInput.value = String(experiment.massExponent);
+    this.ratioInput.value = String(experiment.eddingtonRatio);
+    this.experimentTitle.textContent = experiment.title;
+    this.experimentObservation.textContent = experiment.observation;
+    this.experimentButtons.forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.experiment === id));
+    });
+    this.updateModel();
+  }
+
+  private activateFreeMode(): void {
+    this.experimentTitle.textContent = 'Free experiment';
+    this.experimentObservation.textContent =
+      'Change one control, watch the measured output, then compare it with a guided experiment.';
+    this.experimentButtons.forEach((button) => button.setAttribute('aria-pressed', 'false'));
+    this.updateModel();
   }
 
   private updateModel(): void {
@@ -92,6 +180,8 @@ export class QuasarLab {
     const diskLuminosity = eddingtonRatio * eddingtonLuminosity;
     const peakTemperature = getPeakDiskTemperature(solarMasses, accretionRate);
     const peakWavelengthNm = getWienPeakWavelength(peakTemperature) * 1e9;
+    const peakRadiusRg = (49 / 36) * INNER_RADIUS_RG;
+    const orbitalPeriod = getKeplerianPeriod(solarMasses, peakRadiusRg);
     const gravitationalRadius =
       (NOMINAL_SOLAR_MASS_PARAMETER * solarMasses) / SPEED_OF_LIGHT ** 2;
 
@@ -103,6 +193,7 @@ export class QuasarLab {
     this.temperatureValue.textContent = `${formatNumber(peakTemperature, 0)} K`;
     this.wavelengthValue.textContent = `${formatNumber(peakWavelengthNm, 1)} nm`;
     this.innerRadiusValue.textContent = formatDistance(INNER_RADIUS_RG * gravitationalRadius);
+    this.periodValue.textContent = formatDuration(orbitalPeriod);
   }
 
   private createMarkup(): string {
@@ -115,7 +206,7 @@ export class QuasarLab {
             <a href="?lab=catalog">All labs</a>
           </div>
           <div class="quasar-model-badge">Thin disk · a = 0</div>
-          <div class="quasar-status"><span></span>Analytic baseline</div>
+          <div class="quasar-status"><span></span>Live orbital flow</div>
         </header>
 
         <section class="quasar-viewport" aria-label="Thin accretion disk model">
@@ -135,7 +226,7 @@ export class QuasarLab {
               <span>F(r)</span>
               <p>
                 False colour shows effective temperature. The display compresses radius as √r;
-                it does not simulate lensing, a corona, a jet, or magnetohydrodynamics.
+                moving tracers follow Ω ∝ r⁻³⁄² with time compressed independently of mass.
               </p>
             </div>
           </div>
@@ -143,12 +234,18 @@ export class QuasarLab {
           <aside class="disk-panel" aria-label="Accretion disk properties">
             <p class="quasar-eyebrow">Model output</p>
             <strong>Thermal thin disk</strong>
+            <div class="disk-observation">
+              <span>Current experiment</span>
+              <strong data-experiment-title>—</strong>
+              <p data-experiment-observation>—</p>
+            </div>
             <dl>
               <div><dt>Disk luminosity</dt><dd data-disk-luminosity>—</dd></div>
               <div><dt>Accretion rate</dt><dd data-accretion-rate>—</dd></div>
               <div><dt>Peak temperature</dt><dd data-peak-temperature>—</dd></div>
               <div><dt>Local Wien peak</dt><dd data-peak-wavelength>—</dd></div>
               <div><dt>Inner edge · 6r<sub>g</sub></dt><dd data-inner-radius>—</dd></div>
+              <div><dt>Orbit at hottest annulus</dt><dd data-orbital-period>—</dd></div>
             </dl>
             <p>
               Zero torque at 6r<sub>g</sub>; η = ${THIN_DISK_EFFICIENCY.toFixed(4)}. The Wien value
@@ -165,10 +262,14 @@ export class QuasarLab {
               <span>Eddington ratio <strong data-eddington-ratio-value>0.20</strong></span>
               <input data-eddington-ratio type="range" min="0.01" max="1" value="0.2" step="0.01" />
             </label>
-            <div class="disk-presets" aria-label="Mass presets">
-              <button type="button" data-mass-preset="7">10⁷ M☉</button>
-              <button type="button" data-mass-preset="8.5">10⁸⋅⁵ M☉</button>
-              <button type="button" data-mass-preset="10">10¹⁰ M☉</button>
+            <div class="disk-presets" aria-label="Guided experiments">
+              ${QUASAR_EXPERIMENTS.map(
+                (experiment) => `
+                  <button type="button" data-experiment="${experiment.id}" aria-pressed="false">
+                    ${experiment.label}
+                  </button>
+                `,
+              ).join('')}
             </div>
           </div>
         </section>

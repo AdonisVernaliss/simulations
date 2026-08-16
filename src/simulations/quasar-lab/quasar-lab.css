@@ -232,6 +232,37 @@
   font-weight: 590;
 }
 
+.disk-observation {
+  margin: 0 0 15px;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 175, 98, 0.15);
+  border-radius: 11px;
+  background: rgba(48, 14, 19, 0.38);
+}
+
+.disk-observation > span {
+  color: #a37e68;
+  font-size: 0.5rem;
+  font-weight: 740;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.disk-observation > strong {
+  display: block;
+  margin-top: 5px;
+  color: #ffd2a0;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.disk-observation > p {
+  margin: 5px 0 0;
+  color: #927c73;
+  font-size: 0.57rem;
+  line-height: 1.42;
+}
+
 .disk-panel dl {
   display: grid;
   gap: 8px;
@@ -333,10 +364,23 @@
 }
 
 .disk-presets button:hover,
-.disk-presets button:focus-visible {
+.disk-presets button:focus-visible,
+.disk-presets button[aria-pressed="true"] {
   border-color: rgba(255, 176, 101, 0.36);
   color: #ffe0ba;
+  background: rgba(101, 35, 31, 0.62);
   outline: none;
+}
+
+@media (max-width: 1180px) {
+  .disk-dock {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .disk-presets {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
 }
 
 @media (max-width: 920px) {
@@ -357,7 +401,7 @@
 @media (max-width: 700px) {
   .quasar-shell,
   .quasar-viewport {
-    min-height: 1110px;
+    min-height: 1350px;
   }
 
   .quasar-topbar {
@@ -400,7 +444,7 @@
   }
 
   .disk-panel {
-    top: 650px;
+    top: 720px;
     right: 18px;
     left: 18px;
     width: auto;
