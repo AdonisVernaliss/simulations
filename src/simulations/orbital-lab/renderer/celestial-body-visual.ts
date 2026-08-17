@@ -31,6 +31,7 @@ import {
 } from 'three';
 
 import type { BodyMetadata } from '../worker-protocol';
+import { calculateAffineTidalAxes } from '../model/tidal-stress';
 import type { QualityLevel } from './orbital-renderer';
 import {
   BLACK_HOLE_BEAM_FRAGMENT_SHADER,
@@ -39,6 +40,7 @@ import {
 import { ImpactRemnantVisual } from './impact-remnant-visual';
 import { createPulsarMagnetosphereLayout } from './pulsar-magnetosphere';
 import { SchwarzschildBeamResources } from './schwarzschild-beam-resources';
+import { TidalDisruptionVisual } from './tidal-disruption-visual';
 
 interface GeometryDetail {
   readonly widthSegments: number;
@@ -470,6 +472,7 @@ export class CelestialBodyVisual {
   private blackHoleResources: SchwarzschildBeamResources | undefined;
   private compactField: Group | undefined;
   private impactRemnantVisual: ImpactRemnantVisual | undefined;
+  private tidalDisruptionVisual: TidalDisruptionVisual | undefined;
   private readonly decorativeMeshes: Mesh[] = [];
   private readonly decorativeLines: LineSegments<BufferGeometry, LineBasicMaterial>[] = [];
   private readonly cameraLocal = new Vector3();
@@ -477,6 +480,8 @@ export class CelestialBodyVisual {
   private readonly worldToDisk = new Matrix3();
   private readonly diskRotation = new Matrix4();
   private visualTime = 0;
+  private targetTidalStretch = 1;
+  private currentTidalStretch = 1;
   private quality: QualityLevel;
 
   constructor(
@@ -642,6 +647,12 @@ export class CelestialBodyVisual {
   animate(elapsedSeconds: number): void {
     this.visualTime += elapsedSeconds;
     this.impactRemnantVisual?.update(elapsedSeconds);
+    const tidalBlend = 1 - Math.exp(-Math.max(0, elapsedSeconds) * 5.5);
+    this.currentTidalStretch +=
+      (this.targetTidalStretch - this.currentTidalStretch) * tidalBlend;
+    const transverse = 1 / Math.sqrt(this.currentTidalStretch);
+    this.tidalFrame.scale.set(this.currentTidalStretch, transverse, transverse);
+    this.tidalDisruptionVisual?.update(elapsedSeconds);
     if (this.blackHoleMaterial !== undefined) {
       this.blackHoleMaterial.uniforms.uVisualTime!.value = this.visualTime;
     }
@@ -653,11 +664,14 @@ export class CelestialBodyVisual {
     directionZ: number,
     stressRatio: number,
   ): void {
-    if (this.body.kind === 'black-hole' || stressRatio < 0.015) {
-      this.tidalFrame.quaternion.identity();
-      this.tidalFrame.scale.set(1, 1, 1);
+    if (this.body.kind === 'black-hole') {
       return;
     }
+
+    const axes = calculateAffineTidalAxes(stressRatio);
+    this.targetTidalStretch = axes.longitudinal;
+    this.tidalDisruptionVisual?.setStress(stressRatio);
+    if (stressRatio < 0.015) return;
 
     this.tidalDirection.set(directionX, directionY, directionZ);
     if (this.tidalDirection.lengthSq() <= Number.EPSILON) {
@@ -669,9 +683,12 @@ export class CelestialBodyVisual {
       CelestialBodyVisual.TIDAL_AXIS,
       this.tidalDirection,
     );
-    const stretch = 1 + Math.min(7, (stressRatio - 0.015) * 3.6);
-    const transverse = 1 / Math.sqrt(stretch);
-    this.tidalFrame.scale.set(stretch, transverse, transverse);
+    if (stressRatio > 0.06 && this.tidalDisruptionVisual === undefined) {
+      this.tidalDisruptionVisual = new TidalDisruptionVisual(this.body.color, this.quality);
+      this.root.add(this.tidalDisruptionVisual.group);
+    }
+    this.tidalDisruptionVisual?.group.quaternion.copy(this.tidalFrame.quaternion);
+    this.tidalDisruptionVisual?.setStress(stressRatio);
   }
 
   setQuality(quality: QualityLevel): void {
@@ -698,6 +715,7 @@ export class CelestialBodyVisual {
         quality === 'high' ? 2 : quality === 'balanced' ? 1 : 0;
     }
     this.impactRemnantVisual?.setQuality(quality);
+    this.tidalDisruptionVisual?.setQuality(quality);
   }
 
   setSkyTexture(texture: Texture): void {
@@ -714,6 +732,7 @@ export class CelestialBodyVisual {
     this.ring?.geometry.dispose();
     this.ringMaterial?.dispose();
     this.impactRemnantVisual?.dispose();
+    this.tidalDisruptionVisual?.dispose();
     if (this.blackHoleMaterial !== undefined) {
       this.blackHoleResources?.unbind(this.blackHoleMaterial);
     }

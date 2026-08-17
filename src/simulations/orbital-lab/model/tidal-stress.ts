@@ -20,3 +20,33 @@ export const calculateTidalStressRatio = (
 
   return (2 * sourceMass * bodyRadius ** 3) / (bodyMass * separation ** 3);
 };
+
+/**
+ * Eigenvalue ratio of the leading-order Newtonian point-mass tidal tensor in
+ * its principal frame. The zero trace separates deformation from isotropic
+ * expansion: radial stretching is accompanied by transverse compression.
+ */
+export const NEWTONIAN_TIDAL_EIGENVALUE_RATIO = [2, -1, -1] as const;
+
+export interface AffineTidalAxes {
+  readonly longitudinal: number;
+  readonly transverse: number;
+}
+
+/**
+ * Reduced-order affine response used by the renderer. It keeps the visual
+ * ellipsoid volume constant while smoothly approaching a bounded disruption
+ * shape; hydrodynamic mass loss is rendered separately as tracer streams.
+ */
+export const calculateAffineTidalAxes = (stressRatio: number): AffineTidalAxes => {
+  if (!Number.isFinite(stressRatio) || stressRatio <= 0.015) {
+    return { longitudinal: 1, transverse: 1 };
+  }
+
+  const response = stressRatio - 0.015;
+  const longitudinal = 1 + 5.5 * (1 - Math.exp(-0.55 * response));
+  return {
+    longitudinal,
+    transverse: 1 / Math.sqrt(longitudinal),
+  };
+};

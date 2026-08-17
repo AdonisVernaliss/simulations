@@ -372,7 +372,7 @@ export const presets = [
     summary: 'A star passes close enough to a black hole for the tidal gradient to overcome stellar surface gravity.',
     fixedStep: 0.00035,
     secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
-    defaultTimeWarp: 1_000_000,
+    defaultTimeWarp: 250_000,
     cameraDistance: 4.2,
     trailSpan: 6,
     bodies: barycentricBodies([
@@ -412,7 +412,7 @@ export const presets = [
     summary: 'A rocky body falls through a black hole capture radius after visible tidal stretching.',
     fixedStep: 0.0003,
     secondsPerTimeUnit: AU_SOLAR_MASS_TIME_UNIT_SECONDS,
-    defaultTimeWarp: 1_000_000,
+    defaultTimeWarp: 250_000,
     cameraDistance: 3.8,
     trailSpan: 5,
     bodies: barycentricBodies([
