@@ -32,7 +32,6 @@ This provides an understandable first action for a new user while retaining a sa
 - a black-hole tidal encounter with a live self-gravity stress indicator;
 - motion around the barycentre of an equal-mass binary;
 - the periodic three-body figure-eight solution;
-- low-energy planetary accretion.
 
 ### Atomic Orbitals
 

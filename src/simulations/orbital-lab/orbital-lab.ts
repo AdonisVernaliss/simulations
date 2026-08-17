@@ -31,8 +31,7 @@ type OrbitalExperimentId =
   | 'horizon-capture'
   | 'binary-stars'
   | 'stellar-merger'
-  | 'figure-eight'
-  | 'head-on-collision';
+  | 'figure-eight';
 
 const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
   {
@@ -125,13 +124,6 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     title: 'A rare periodic three-body choreography',
     question: 'Can three gravitating bodies repeat one shared path?',
     observation: 'With special initial conditions, equal bodies follow the same figure eight in phase order.',
-  },
-  {
-    id: 'head-on-collision',
-    label: 'Planet accretion',
-    title: 'Merge below the disruption threshold',
-    question: 'Which quantities survive a low-energy planetary collision?',
-    observation: 'Total mass and linear momentum remain; kinetic energy is converted and is not conserved.',
   },
 ] as const;
 
