@@ -497,9 +497,17 @@ export class NBodySimulation {
           : visualClass === 'compact-merger'
             ? 'Compact merger remnant'
             : 'Post-impact remnant';
+    const blackHoleSurfaces = [firstIndex, secondIndex]
+      .filter((index) => this.kindsData[index] === 'black-hole')
+      .map((index) => this.surfacesData[index]!);
+    const retainedBlackHoleSurface: BodySurface = blackHoleSurfaces.includes('quasar')
+      ? 'quasar'
+      : blackHoleSurfaces.includes('accretion-disk')
+        ? 'accretion-disk'
+        : 'none';
     const mergedSurface: BodySurface =
       mergedKind === 'black-hole'
-        ? 'none'
+        ? retainedBlackHoleSurface
         : visualClass === 'stellar-merger'
           ? 'stellar-merger'
           : visualClass === 'compact-merger'

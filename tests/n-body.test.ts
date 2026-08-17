@@ -363,14 +363,14 @@ describe('NBodySimulation', () => {
     expect(Math.hypot(...simulation.getDiagnostics().linearMomentum)).toBeLessThan(1e-10);
   });
 
-  it('captures an intersecting body without changing the black-hole identity', () => {
+  it('captures an intersecting body without changing an accreting black hole identity or emitter', () => {
     const simulation = new NBodySimulation(
       [
         {
           id: 'hole',
           name: 'Black hole',
           kind: 'black-hole',
-          surface: 'none',
+          surface: 'accretion-disk',
           mass: 5,
           radius: 0.2,
           renderRadius: 0.3,
@@ -397,6 +397,7 @@ describe('NBodySimulation', () => {
 
     expect(simulation.count).toBe(1);
     expect(simulation.kinds[0]).toBe('black-hole');
+    expect(simulation.surfaces[0]).toBe('accretion-disk');
     expect(simulation.masses[0]).toBe(6);
     expect(simulation.lastCollisionEvent?.outcome).toBe('capture');
   });
