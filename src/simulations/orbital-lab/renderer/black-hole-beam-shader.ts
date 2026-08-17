@@ -1,4 +1,9 @@
-import { BOLOMETRIC_DOPPLER_EXPONENT } from '../model/relativistic-transfer';
+import {
+  ACTIVE_NUCLEUS_RADIANCE_MULTIPLIER,
+  BOLOMETRIC_DOPPLER_EXPONENT,
+  THIN_DISK_RADIANCE_BASE,
+  THIN_DISK_TEMPERATURE_WEIGHT,
+} from '../model/relativistic-transfer';
 
 export const BLACK_HOLE_BEAM_VERTEX_SHADER = `
   varying vec2 vPlanePosition;
@@ -259,15 +264,16 @@ export const BLACK_HOLE_BEAM_FRAGMENT_SHADER = `
     float structure = discStructure(vec2(radius, angle), retardedTime);
     float innerFade = smoothstep(INNER_DISC_RADIUS, INNER_DISC_RADIUS * 1.08, radius);
     float outerFade = 1.0 - smoothstep(OUTER_DISC_RADIUS * 0.82, OUTER_DISC_RADIUS, radius);
-    float activity = uMode > 1.5 ? 1.0 : 0.72;
+    float activity = uMode > 1.5 ? ${ACTIVE_NUCLEUS_RADIANCE_MULTIPLIER} : 1.0;
     float opacity = innerFade * outerFade * structure * activity;
     float bolometricBoost = pow(
       clamp(dopplerFactor, 0.3, 3.0),
       ${BOLOMETRIC_DOPPLER_EXPONENT}.0
     );
     vec3 color = thermalColor(temperature, dopplerFactor) *
-      (0.55 + 1.35 * temperature) * bolometricBoost * activity;
-    return vec4(color, clamp(opacity, 0.0, uMode > 1.5 ? 0.96 : 0.82));
+      (${THIN_DISK_RADIANCE_BASE} + ${THIN_DISK_TEMPERATURE_WEIGHT} * temperature) *
+      bolometricBoost * activity;
+    return vec4(color, clamp(opacity, 0.0, 0.98));
   }
 
   vec3 sampleSky(vec3 localDirection) {
