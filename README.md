@@ -54,7 +54,7 @@ Preset positions and velocities are barycentric, so their initial center of mass
 
 The Solar System preset uses JPL-derived mass ratios and orbital scales, but deliberately uses circular, coplanar initial orbits. The model is educational rather than a source of astronomical ephemerides.
 
-See [Scientific basis](docs/scientific-basis.md) for the equations, source provenance, automated validation, limitations, and the acceptance policy for future biological models.
+See [Scientific basis](docs/scientific-basis.md) for equations, validation, and limitations, and [Event model sources](docs/event-models.md) for the open SPH/numerical-relativity upgrade paths and their runtime boundary.
 
 ## Atomic Orbitals Lab
 
@@ -102,7 +102,7 @@ See the [Quasar thin-disk model card](docs/thin-disk.md) for equations, assumpti
 - Display-only energy diagnostics are sampled at the interface refresh rate rather than at the physics-frame rate.
 - Bounded per-body meshes support distinct surfaces, compact-object emission, selection, and quality-dependent geometry.
 - Trails use fixed-size circular GPU buffers.
-- The licensed Gaia EDR3 sky is stored in three local resolutions and loaded for the selected quality level.
+- NASA Deep Star Maps 2020 is stored in three local resolutions and loaded for the selected quality level.
 - Device pixel ratio, sky resolution, disk structure, and impact-tracer count follow the selected quality level.
 - Schwarzschild deflection and disk intersections use two fixed lookup textures, so shader work remains bounded per covered pixel.
 - Catch-up physics work is bounded after delayed frames.

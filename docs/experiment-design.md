@@ -65,13 +65,13 @@ physical scale of the same normalized Schwarzschild geometry.
 
 “Black hole interaction” is not one physical model. It must be separated into modes with different equations:
 
-- light interaction uses exact planar null geodesics in Black Hole Optics and a thin-lens screen approximation in Cosmic Sandbox;
+- light interaction uses exact planar null geodesics in Black Hole Optics and a precomputed Schwarzschild beam-transfer parameterization in Cosmic Sandbox;
 - massive-particle and stellar motion is available as a Newtonian far-field baseline, not as timelike geodesics;
 - tidal disruption requires stellar self-gravity and hydrodynamics;
 - accretion requires disk or plasma dynamics plus radiation, with the current thin-disk laboratory serving only as an analytic baseline;
 - binary-black-hole waveforms require numerical-relativity or validated surrogate data; the sandbox implements only contact, retained momentum, and a bounded radiated-mass estimate.
 
-The interface does not reuse the light-ray integrator to fake a stellar orbit or add an artistic jet to the thin-disk equations. The collision model detects the catastrophic-energy boundary but deliberately omits fragment animation: hydrodynamic debris requires its own material solver, model card, and tests. The tidal scene exposes a leading-order stress ratio and volume-preserving visual deformation without claiming stellar-fluid evolution. Any future hydrodynamic or numerical-relativity mode requires its own model card and tests.
+The interface does not reuse the light-ray integrator to fake a stellar orbit or add an artistic jet to the thin-disk equations. The collision model detects the catastrophic-energy boundary but deliberately omits invented massive fragments: bounded massless tracers communicate unresolved flow without entering the dynamics. The tidal scene exposes a leading-order stress ratio, volume-preserving deformation, and a post-capture tracer stream without claiming stellar-fluid evolution. Any future hydrodynamic or numerical-relativity mode requires its own model card and tests.
 
 ## Performance rules
 
