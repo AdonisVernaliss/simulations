@@ -36,13 +36,21 @@ const SKY_FRAGMENT_SHADER = `
 
   void main() {
     vec3 direction = normalize(vSkyDirection);
+    float skyRotation = 1.87;
+    direction = vec3(
+      direction.x,
+      cos(skyRotation) * direction.y - sin(skyRotation) * direction.z,
+      sin(skyRotation) * direction.y + cos(skyRotation) * direction.z
+    );
     vec2 uv = vec2(
       atan(direction.z, direction.x) / (2.0 * PI) + 0.5,
       asin(clamp(direction.y, -1.0, 1.0)) / PI + 0.5
     );
     vec3 observed = texture2D(uSkyMap, uv).rgb;
-    vec3 blackPoint = max(observed - vec3(0.0015), vec3(0.0));
-    vec3 exposed = vec3(1.0) - exp(-blackPoint * 1.08);
+    vec3 blackPoint = max(observed - vec3(0.00025), vec3(0.0));
+    float luminance = dot(blackPoint, vec3(0.2126, 0.7152, 0.0722));
+    float exposure = mix(3.2, 5.4, smoothstep(0.008, 0.1, luminance));
+    vec3 exposed = vec3(1.0) - exp(-blackPoint * exposure);
     gl_FragColor = vec4(exposed, 1.0);
   }
 `;

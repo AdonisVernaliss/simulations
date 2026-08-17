@@ -100,6 +100,27 @@ describe('orbital presets', () => {
     expect(neutronBinary?.bodies.every((body) => body.kind === 'neutron-star')).toBe(true);
   });
 
+  it('keeps one vacuum black-hole scene while giving encounter scenes visible emitters', () => {
+    const vacuumMerger = presets.find((preset) => preset.id === 'black-hole-merger');
+    expect(
+      vacuumMerger?.bodies
+        .filter((body) => body.kind === 'black-hole')
+        .every((body) => body.surface === 'none'),
+    ).toBe(true);
+
+    for (const presetId of [
+      'black-hole-flyby',
+      'black-hole-binary',
+      'tidal-encounter',
+      'horizon-capture',
+    ]) {
+      const blackHole = presets
+        .find((preset) => preset.id === presetId)
+        ?.bodies.find((body) => body.kind === 'black-hole');
+      expect(blackHole?.surface, presetId).toBe('accretion-disk');
+    }
+  });
+
   it('includes a collision experiment that conserves mass and momentum while merging', () => {
     const preset = presets.find((candidate) => candidate.id === 'head-on-collision');
     expect(preset).toBeDefined();

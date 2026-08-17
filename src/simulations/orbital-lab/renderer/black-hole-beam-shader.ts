@@ -1,3 +1,5 @@
+import { BOLOMETRIC_DOPPLER_EXPONENT } from '../model/relativistic-transfer';
+
 export const BLACK_HOLE_BEAM_VERTEX_SHADER = `
   varying vec2 vPlanePosition;
   varying vec3 vWorldPosition;
@@ -227,7 +229,7 @@ export const BLACK_HOLE_BEAM_FRAGMENT_SHADER = `
   }
 
   vec3 thermalColor(float temperature, float dopplerFactor) {
-    float shifted = clamp(temperature * pow(clamp(dopplerFactor, 0.35, 2.8), 0.72), 0.0, 1.2);
+    float shifted = clamp(temperature * clamp(dopplerFactor, 0.3, 3.0), 0.0, 1.35);
     vec3 amber = vec3(0.93, 0.13, 0.012);
     vec3 gold = vec3(1.0, 0.58, 0.11);
     vec3 white = vec3(1.0, 0.96, 0.82);
@@ -259,21 +261,32 @@ export const BLACK_HOLE_BEAM_FRAGMENT_SHADER = `
     float outerFade = 1.0 - smoothstep(OUTER_DISC_RADIUS * 0.82, OUTER_DISC_RADIUS, radius);
     float activity = uMode > 1.5 ? 1.0 : 0.72;
     float opacity = innerFade * outerFade * structure * activity;
-    float invariantBoost = pow(clamp(dopplerFactor, 0.42, 2.2), 3.0);
+    float bolometricBoost = pow(
+      clamp(dopplerFactor, 0.3, 3.0),
+      ${BOLOMETRIC_DOPPLER_EXPONENT}.0
+    );
     vec3 color = thermalColor(temperature, dopplerFactor) *
-      (0.55 + 1.35 * temperature) * invariantBoost * activity;
+      (0.55 + 1.35 * temperature) * bolometricBoost * activity;
     return vec4(color, clamp(opacity, 0.0, uMode > 1.5 ? 0.96 : 0.82));
   }
 
   vec3 sampleSky(vec3 localDirection) {
     vec3 direction = normalize(uDiskToWorld * localDirection);
+    float skyRotation = 1.87;
+    direction = vec3(
+      direction.x,
+      cos(skyRotation) * direction.y - sin(skyRotation) * direction.z,
+      sin(skyRotation) * direction.y + cos(skyRotation) * direction.z
+    );
     vec2 uv = vec2(
       atan(direction.z, direction.x) / (2.0 * PI) + 0.5,
       asin(clamp(direction.y, -1.0, 1.0)) / PI + 0.5
     );
     vec3 observed = texture2D(uSkyMap, uv).rgb;
-    vec3 blackPoint = max(observed - vec3(0.0015), vec3(0.0));
-    return vec3(1.0) - exp(-blackPoint * 1.08);
+    vec3 blackPoint = max(observed - vec3(0.00025), vec3(0.0));
+    float luminance = dot(blackPoint, vec3(0.2126, 0.7152, 0.0722));
+    float exposure = mix(3.2, 5.4, smoothstep(0.008, 0.1, luminance));
+    return vec3(1.0) - exp(-blackPoint * exposure);
   }
 
   void compositeDisc(
