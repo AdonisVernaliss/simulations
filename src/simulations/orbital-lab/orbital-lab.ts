@@ -81,7 +81,7 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     label: 'Pulsar system',
     title: 'A rotating neutron star acts as both beacon and mass',
     question: 'Why do the beams sweep while the planets orbit?',
-    observation: 'Rotation moves the magnetic-axis emission pattern; orbital motion follows the pulsar mass through the same N-body solver.',
+    observation: 'Rotation sweeps the magnetic-axis emission pattern. Closed flux ends inside the light cylinder; open flux continues outward as the pulsar wind while companions follow the same N-body gravity.',
   },
   {
     id: 'neutron-star-binary',
@@ -730,7 +730,7 @@ export class OrbitalLab {
               : selection.body.kind === 'black-hole'
                 ? 'Naked Schwarzschild black hole: no emitting disk is assumed. The horizon is at rₛ, photons can orbit only unstably at 1.5 rₛ, and bent background light outlines the critical 3√3/2 rₛ ≈ 2.598 rₛ shadow.'
             : selection.body.kind === 'pulsar'
-              ? 'A rotating neutron star with analytic closed dipole lines, swept-back open lines, a corrugated equatorial current sheet, polar caps, and feathered magnetic-axis beams. The layered topology follows force-free/PIC morphology published by NASA GSFC; the object itself remains a massive N-body participant.'
+              ? 'A rotating neutron star with analytic closed dipole lines inside the light cylinder. Beyond it, open lines and the corrugated current sheet become a swept-back pulsar wind rendered to the scene boundary; closed loops are not incorrectly extended to infinity. The object remains a massive N-body participant.'
               : selection.body.kind === 'neutron-star'
                 ? 'A compact stellar remnant shown at an enlarged visual radius. Its mass and physical radius—not the glow—set dynamics and contact.'
                 : 'Rendered size is enlarged for readability; gravity and collisions use the physical radius and mass.';
