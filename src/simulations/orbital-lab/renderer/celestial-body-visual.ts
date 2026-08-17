@@ -118,7 +118,7 @@ const SUN_FRAGMENT_SHADER = `
   }
 `;
 
-const MOLTEN_FRAGMENT_SHADER = `
+const IMPACT_REMNANT_FRAGMENT_SHADER = `
   uniform float uTime;
   uniform vec3 uColor;
   varying vec3 vObjectNormal;
@@ -165,6 +165,59 @@ const MOLTEN_FRAGMENT_SHADER = `
     vec3 lava = mix(uColor * vec3(0.9, 0.16, 0.018), vec3(1.0, 0.9, 0.42), fissures);
     vec3 color = mix(cooledRock, lava, clamp(exposedMelt, 0.0, 1.0));
     color *= 0.76 + 0.24 * limb;
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
+const STELLAR_MERGER_FRAGMENT_SHADER = `
+  uniform float uTime;
+  uniform vec3 uColor;
+  varying vec3 vObjectNormal;
+  varying vec3 vViewNormal;
+
+  float hash(vec3 p) {
+    p = fract(p * 0.3183099 + 0.1);
+    p *= 17.0;
+    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+  }
+
+  float noise(vec3 p) {
+    vec3 i = floor(p);
+    vec3 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(mix(hash(i), hash(i + vec3(1, 0, 0)), f.x),
+          mix(hash(i + vec3(0, 1, 0)), hash(i + vec3(1, 1, 0)), f.x), f.y),
+      mix(mix(hash(i + vec3(0, 0, 1)), hash(i + vec3(1, 0, 1)), f.x),
+          mix(hash(i + vec3(0, 1, 1)), hash(i + vec3(1, 1, 1)), f.x), f.y),
+      f.z
+    );
+  }
+
+  float fbm(vec3 p) {
+    float value = 0.0;
+    float amplitude = 0.56;
+    for (int octave = 0; octave < 5; octave++) {
+      value += amplitude * noise(p);
+      p = p * 2.04 + vec3(5.7, 2.9, 8.1);
+      amplitude *= 0.47;
+    }
+    return value;
+  }
+
+  void main() {
+    float azimuth = atan(vObjectNormal.z, vObjectNormal.x);
+    vec3 advected = vObjectNormal * 7.2 + vec3(uTime * 0.021, -uTime * 0.013, 0.0);
+    float convection = fbm(advected);
+    float shear = 0.5 + 0.5 * sin(azimuth * 7.0 + vObjectNormal.y * 9.0 - uTime * 0.09);
+    float hotCell = smoothstep(0.42, 0.82, convection * 0.82 + shear * 0.2);
+    float limb = pow(clamp(dot(normalize(vViewNormal), vec3(0.0, 0.0, 1.0)), 0.0, 1.0), 0.2);
+    vec3 envelope = uColor * vec3(0.68, 0.17, 0.035);
+    vec3 photosphere = uColor * vec3(1.2, 0.72, 0.24);
+    vec3 shock = vec3(1.0, 0.91, 0.62);
+    vec3 color = mix(envelope, photosphere, convection);
+    color = mix(color, shock, hotCell * 0.46);
+    color *= 0.66 + 0.34 * limb;
     gl_FragColor = vec4(color, 1.0);
   }
 `;
@@ -263,14 +316,26 @@ export class CelestialMaterialLibrary {
   }
 
   createSurfaceMaterial(body: BodyMetadata): Material {
-    if (body.surface === 'molten') {
+    if (body.surface === 'impact-remnant') {
       return new ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
           uColor: { value: new Color(body.color) },
         },
         vertexShader: SUN_VERTEX_SHADER,
-        fragmentShader: MOLTEN_FRAGMENT_SHADER,
+        fragmentShader: IMPACT_REMNANT_FRAGMENT_SHADER,
+        toneMapped: false,
+      });
+    }
+
+    if (body.surface === 'stellar-merger') {
+      return new ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uColor: { value: new Color(body.color) },
+        },
+        vertexShader: SUN_VERTEX_SHADER,
+        fragmentShader: STELLAR_MERGER_FRAGMENT_SHADER,
         toneMapped: false,
       });
     }
@@ -383,7 +448,12 @@ export class CelestialBodyVisual {
     this.surfaceMaterial = materials.createSurfaceMaterial(body);
     this.pickMesh = new Mesh(this.createSphereGeometry(), this.surfaceMaterial);
     this.pickMesh.userData.bodyIndex = bodyIndex;
-    this.pickMesh.scale.y = body.kind === 'gas-giant' ? 0.94 : body.kind === 'ice-giant' ? 0.97 : 1;
+    if (body.surface === 'impact-remnant') {
+      this.pickMesh.scale.set(1.08, 0.92, 1.006);
+    } else {
+      this.pickMesh.scale.y =
+        body.kind === 'gas-giant' ? 0.94 : body.kind === 'ice-giant' ? 0.97 : 1;
+    }
     this.oriented.rotation.x = Math.PI / 2 - body.axialTilt;
     this.oriented.add(this.pickMesh);
     this.tidalFrame.add(this.oriented);
@@ -463,19 +533,21 @@ export class CelestialBodyVisual {
       this.addCompactStarField(body.kind === 'pulsar');
     }
 
-    if (body.kind === 'star' || body.surface === 'molten') {
+    if (body.kind === 'star' || body.surface === 'impact-remnant') {
       const glow = new Sprite(
         new SpriteMaterial({
           map: glowTexture,
-          color: body.surface === 'molten' ? 0xff4f14 : body.color,
+          color: body.surface === 'impact-remnant' ? 0xff4f14 : body.color,
           transparent: true,
-          opacity: body.surface === 'molten' ? 0.24 : 0.7,
+          opacity:
+            body.surface === 'impact-remnant' ? 0.18 : body.surface === 'stellar-merger' ? 0.82 : 0.7,
           blending: AdditiveBlending,
           depthWrite: false,
           toneMapped: false,
         }),
       );
-      const glowScale = body.surface === 'molten' ? 2.2 : 3.6;
+      const glowScale =
+        body.surface === 'impact-remnant' ? 2.05 : body.surface === 'stellar-merger' ? 4.5 : 3.6;
       glow.scale.set(glowScale, glowScale, 1);
       glow.renderOrder = -1;
       this.root.add(glow);

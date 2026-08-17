@@ -381,29 +381,40 @@ export class OrbitalLab {
 
     this.lastCollisionSequence = collision.sequence;
     this.renderer.showCollision(collision);
-    const descriptions: Record<CollisionEvent['outcome'], readonly [string, string]> = {
-      merge: [
-        'Hot impact remnant',
-        'Mass and momentum formed one heated body. At equal bulk density, two equal worlds double the mass but increase radius only by ∛2 ≈ 1.26.',
-      ],
-      'hit-and-run': [
-        'Hit and run',
-        'A fast grazing impact transferred momentum, but both major bodies survived.',
-      ],
-      disruption: [
-        'Hydrodynamic limit reached',
-        'Impact energy crossed the disruption threshold. The expanding cloud marks unresolved ejecta; fragment masses and trajectories require a fluid/SPH model.',
-      ],
-      capture: [
-        'Horizon capture',
-        'The body crossed the scaled capture radius and its mass and momentum joined the black hole.',
-      ],
-      'black-hole-merger': [
-        'Black hole merger',
-        `${collision.radiatedMass.toExponential(2)} mass units were assigned to radiated gravitational energy.`,
-      ],
-    };
-    const [title, detail] = descriptions[collision.outcome];
+    let title: string;
+    let detail: string;
+
+    if (collision.visualClass === 'tidal-disruption') {
+      title = 'Tidal disruption';
+      detail =
+        'The star is stretched along the tidal gradient. The visible stream separates into bound and escaping material before the resolved mass crosses the capture radius.';
+    } else if (collision.visualClass === 'horizon-capture') {
+      title = 'Horizon capture';
+      detail =
+        'The infalling body is stretched into a fading tidal stream. Its resolved mass and momentum join the black hole only after contact with the scaled capture radius.';
+    } else if (collision.visualClass === 'compact-merger') {
+      title =
+        collision.outcome === 'black-hole-merger' ? 'Black hole merger' : 'Compact merger';
+      detail =
+        collision.outcome === 'black-hole-merger'
+          ? `${collision.radiatedMass.toExponential(2)} mass units leave as gravitational radiation. No false luminous explosion is drawn for a vacuum binary.`
+          : 'The hot outflow is a reduced-order matter proxy; the final compact object depends on masses and an equation of state not solved in real time.';
+    } else if (collision.visualClass === 'stellar-merger') {
+      title = collision.outcome === 'disruption' ? 'Stellar disruption' : 'Stellar merger';
+      detail =
+        'A rotating, expanded remnant sits inside an equatorial shock outflow. The flow communicates the luminous-red-nova regime without claiming to replace stellar hydrodynamics.';
+    } else if (collision.outcome === 'hit-and-run') {
+      title = 'Hit and run';
+      detail = 'A fast grazing impact transferred momentum, but both major bodies survived.';
+    } else if (collision.outcome === 'disruption') {
+      title = 'Catastrophic disruption threshold';
+      detail =
+        'Impact energy crossed the gravity-regime threshold. The shock curtain marks unresolved melt, vapor, and dust; invented spherical fragments are intentionally omitted.';
+    } else {
+      title = 'Post-impact remnant';
+      detail =
+        'Mass and momentum form one heated body. The core keeps a volume-equivalent radius while a separate cooling curtain carries the unresolved ejecta.';
+    }
     this.collisionTitle.textContent = title;
     this.collisionDetail.textContent = detail;
     this.collisionNotice.dataset.open = 'true';
@@ -698,8 +709,10 @@ export class OrbitalLab {
             )}`;
       this.selectedRotationElement.textContent = rotationPeriod;
       this.selectedPhysicsElement.textContent =
-        selection.body.surface === 'molten'
-          ? 'A volume-equivalent impact remnant: mass and linear momentum are conserved, while the hot fractured surface is a qualitative thermal state. Cooling, composition, vapor and ejecta require a hydrodynamic material model.'
+        selection.body.surface === 'impact-remnant'
+          ? 'A volume-equivalent post-impact core: mass and linear momentum are conserved. Its oblate, fractured surface and cooling ejecta curtain are reduced-order thermal visuals; composition and fluid flow require SPH or hydrodynamics.'
+          : selection.body.surface === 'stellar-merger'
+            ? 'An expanded stellar-merger envelope with a turbulent photosphere and equatorial outflow. Gravity conserves resolved mass and momentum; internal mixing, radiative transfer and dust formation require stellar hydrodynamics.'
           : selection.body.id === 'tidally-stretched-star'
             ? 'The shape follows the black hole’s tidal gradient. Stretching rises as inverse distance cubed; near a stress ratio of one, the leading tidal acceleration across the star matches its surface self-gravity. Fluid breakup is not simulated.'
           : selection.body.surface === 'quasar'

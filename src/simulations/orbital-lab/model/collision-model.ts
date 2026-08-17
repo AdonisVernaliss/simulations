@@ -43,7 +43,7 @@ export const classifyCollisionVisual = (
     return includesOrdinaryStar ? 'tidal-disruption' : 'horizon-capture';
   }
 
-  if (firstKind === 'star' && secondKind === 'star') return 'stellar-merger';
+  if (includesOrdinaryStar) return 'stellar-merger';
   const compactKinds: readonly BodyKind[] = ['neutron-star', 'pulsar'];
   if (compactKinds.includes(firstKind) && compactKinds.includes(secondKind)) {
     return 'compact-merger';

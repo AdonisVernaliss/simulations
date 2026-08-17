@@ -20,6 +20,7 @@ describe('gravity-regime collision model', () => {
   it('assigns distinct visual regimes without changing the dynamical outcome', () => {
     expect(classifyCollisionVisual('rocky', 'terrestrial')).toBe('planetary-impact');
     expect(classifyCollisionVisual('star', 'star')).toBe('stellar-merger');
+    expect(classifyCollisionVisual('star', 'rocky')).toBe('stellar-merger');
     expect(classifyCollisionVisual('black-hole', 'star')).toBe('tidal-disruption');
     expect(classifyCollisionVisual('black-hole', 'terrestrial')).toBe('horizon-capture');
     expect(classifyCollisionVisual('black-hole', 'black-hole')).toBe('compact-merger');

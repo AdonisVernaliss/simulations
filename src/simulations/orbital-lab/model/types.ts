@@ -25,7 +25,8 @@ export type BodySurface =
   | 'quasar'
   | 'neutron-star'
   | 'pulsar'
-  | 'molten'
+  | 'impact-remnant'
+  | 'stellar-merger'
   | 'procedural'
   | 'none';
 

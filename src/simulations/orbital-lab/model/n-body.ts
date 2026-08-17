@@ -477,11 +477,34 @@ export class NBodySimulation {
     const mergedPosition: number[] = [];
     const mergedVelocity: number[] = [];
     const dominantIndex = firstMass >= secondMass ? firstIndex : secondIndex;
+    const visualClass = classifyCollisionVisual(
+      this.kindsData[firstIndex]!,
+      this.kindsData[secondIndex]!,
+    );
     const mergedKind =
       this.kindsData[firstIndex] === 'black-hole' ||
       this.kindsData[secondIndex] === 'black-hole'
         ? 'black-hole'
         : this.kindsData[dominantIndex]!;
+    const volumeEquivalentRenderRadius = Math.cbrt(
+      this.renderRadiusData[firstIndex]! ** 3 + this.renderRadiusData[secondIndex]! ** 3,
+    );
+    const mergedName =
+      mergedKind === 'black-hole'
+        ? `${this.namesData[firstIndex]} + ${this.namesData[secondIndex]}`
+        : visualClass === 'stellar-merger'
+          ? 'Stellar merger remnant'
+          : visualClass === 'compact-merger'
+            ? 'Compact merger remnant'
+            : 'Post-impact remnant';
+    const mergedSurface: BodySurface =
+      mergedKind === 'black-hole'
+        ? 'none'
+        : visualClass === 'stellar-merger'
+          ? 'stellar-merger'
+          : visualClass === 'compact-merger'
+            ? this.surfacesData[dominantIndex]!
+            : 'impact-remnant';
 
     for (let component = 0; component < COMPONENTS_PER_BODY; component += 1) {
       mergedPosition.push(
@@ -498,17 +521,9 @@ export class NBodySimulation {
 
     const mergedBody: BodyDefinition = {
       id: `${this.idsData[firstIndex]}+${this.idsData[secondIndex]}`,
-      name:
-        mergedKind === 'black-hole'
-          ? `${this.namesData[firstIndex]} + ${this.namesData[secondIndex]}`
-          : 'Hot impact remnant',
+      name: mergedName,
       kind: mergedKind,
-      surface:
-        mergedKind === 'black-hole'
-          ? 'none'
-          : mergedKind === 'terrestrial' || mergedKind === 'rocky' || mergedKind === 'generic'
-            ? 'molten'
-            : this.surfacesData[dominantIndex]!,
+      surface: mergedSurface,
       mass: finalMass,
       radius:
         mergedKind === 'black-hole'
@@ -516,12 +531,15 @@ export class NBodySimulation {
           : Math.cbrt(
               this.radiusData[firstIndex]! ** 3 + this.radiusData[secondIndex]! ** 3,
             ),
-      renderRadius: Math.cbrt(
-        this.renderRadiusData[firstIndex]! ** 3 + this.renderRadiusData[secondIndex]! ** 3,
-      ),
+      renderRadius:
+        visualClass === 'stellar-merger'
+          ? volumeEquivalentRenderRadius * 1.32
+          : volumeEquivalentRenderRadius,
       color:
-        mergedKind === 'terrestrial' || mergedKind === 'rocky' || mergedKind === 'generic'
+        mergedSurface === 'impact-remnant'
           ? '#ff7a32'
+          : mergedSurface === 'stellar-merger'
+            ? '#ffad6a'
           : this.colorsData[dominantIndex]!,
       axialTilt: this.axialTiltData[dominantIndex]!,
       rotationRate: this.rotationRateData[dominantIndex]!,

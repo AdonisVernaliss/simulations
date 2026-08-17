@@ -186,7 +186,7 @@ describe('NBodySimulation', () => {
     expect(simulation.rotationRates[0]).toBeCloseTo(6.3, 12);
   });
 
-  it('marks an ordinary merged body as a hot impact remnant', () => {
+  it('marks an ordinary merged body as a post-impact remnant', () => {
     const simulation = new NBodySimulation(
       [
         {
@@ -220,9 +220,50 @@ describe('NBodySimulation', () => {
     simulation.step(0.001);
 
     expect(simulation.count).toBe(1);
+    expect(simulation.names[0]).toBe('Post-impact remnant');
     expect(simulation.kinds[0]).toBe('terrestrial');
-    expect(simulation.surfaces[0]).toBe('molten');
+    expect(simulation.surfaces[0]).toBe('impact-remnant');
     expect(simulation.renderRadii[0]).toBeCloseTo(Math.cbrt(0.3 ** 3 + 0.15 ** 3), 12);
+  });
+
+  it('gives a stellar merger an expanded transient remnant surface', () => {
+    const simulation = new NBodySimulation(
+      [
+        {
+          id: 'star-a',
+          name: 'Star A',
+          kind: 'star',
+          surface: 'sun',
+          mass: 2,
+          radius: 0.2,
+          renderRadius: 0.24,
+          color: '#ffd28a',
+          position: [-0.1, 0, 0],
+          velocity: [0, 0, 0],
+        },
+        {
+          id: 'star-b',
+          name: 'Star B',
+          kind: 'star',
+          surface: 'sun',
+          mass: 1,
+          radius: 0.15,
+          renderRadius: 0.18,
+          color: '#ffb06a',
+          position: [0.1, 0, 0],
+          velocity: [0, 0, 0],
+        },
+      ],
+      { collisions: true, gravitationalConstant: 0 },
+    );
+
+    simulation.step(0.001);
+
+    const volumeEquivalentRenderRadius = Math.cbrt(0.24 ** 3 + 0.18 ** 3);
+    expect(simulation.names[0]).toBe('Stellar merger remnant');
+    expect(simulation.kinds[0]).toBe('star');
+    expect(simulation.surfaces[0]).toBe('stellar-merger');
+    expect(simulation.renderRadii[0]).toBeCloseTo(volumeEquivalentRenderRadius * 1.32, 12);
   });
 
   it('adds a body without resetting elapsed simulation time', () => {
