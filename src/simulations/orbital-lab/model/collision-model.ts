@@ -1,4 +1,9 @@
-import type { BodyKind, CollisionOutcome, Vector3Tuple } from './types';
+import type {
+  BodyKind,
+  CollisionOutcome,
+  CollisionVisualClass,
+  Vector3Tuple,
+} from './types';
 
 export interface CollisionInputs {
   readonly firstMass: number;
@@ -24,6 +29,27 @@ export interface CollisionAnalysis {
 }
 
 const vectorLength = (vector: Vector3Tuple): number => Math.hypot(...vector);
+
+export const classifyCollisionVisual = (
+  firstKind: BodyKind,
+  secondKind: BodyKind,
+): CollisionVisualClass => {
+  const bothBlackHoles = firstKind === 'black-hole' && secondKind === 'black-hole';
+  if (bothBlackHoles) return 'compact-merger';
+
+  const includesBlackHole = firstKind === 'black-hole' || secondKind === 'black-hole';
+  const includesOrdinaryStar = firstKind === 'star' || secondKind === 'star';
+  if (includesBlackHole) {
+    return includesOrdinaryStar ? 'tidal-disruption' : 'horizon-capture';
+  }
+
+  if (firstKind === 'star' && secondKind === 'star') return 'stellar-merger';
+  const compactKinds: readonly BodyKind[] = ['neutron-star', 'pulsar'];
+  if (compactKinds.includes(firstKind) && compactKinds.includes(secondKind)) {
+    return 'compact-merger';
+  }
+  return 'planetary-impact';
+};
 
 export const analyzeCollision = (inputs: CollisionInputs): CollisionAnalysis => {
   const totalMass = inputs.firstMass + inputs.secondMass;

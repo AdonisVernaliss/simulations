@@ -7,7 +7,11 @@ import type {
   SimulationOptions,
   Vector3Tuple,
 } from './types';
-import { analyzeCollision, type CollisionAnalysis } from './collision-model';
+import {
+  analyzeCollision,
+  classifyCollisionVisual,
+  type CollisionAnalysis,
+} from './collision-model';
 import {
   CollisionBroadphase,
   type CollisionBroadphaseAlgorithm,
@@ -344,6 +348,11 @@ export class NBodySimulation {
       this.positionData[otherOffset + 1]! - this.positionData[offset + 1]!,
       this.positionData[otherOffset + 2]! - this.positionData[offset + 2]!,
     ];
+    const relativeVelocity: Vector3Tuple = [
+      this.velocityData[otherOffset]! - this.velocityData[offset]!,
+      this.velocityData[otherOffset + 1]! - this.velocityData[offset + 1]!,
+      this.velocityData[otherOffset + 2]! - this.velocityData[offset + 2]!,
+    ];
     const analysis = analyzeCollision({
       firstMass: this.massData[bodyIndex]!,
       secondMass: this.massData[otherIndex]!,
@@ -352,11 +361,7 @@ export class NBodySimulation {
       firstKind: this.kindsData[bodyIndex]!,
       secondKind: this.kindsData[otherIndex]!,
       relativePosition,
-      relativeVelocity: [
-        this.velocityData[otherOffset]! - this.velocityData[offset]!,
-        this.velocityData[otherOffset + 1]! - this.velocityData[offset + 1]!,
-        this.velocityData[otherOffset + 2]! - this.velocityData[offset + 2]!,
-      ],
+      relativeVelocity,
       gravitationalConstant: this.gravitationalConstant,
     });
     const participants: readonly [string, string] = [
@@ -390,6 +395,22 @@ export class NBodySimulation {
       this.renderRadiusData[bodyIndex]!,
       this.renderRadiusData[otherIndex]!,
     );
+    const visualClass = classifyCollisionVisual(
+      this.kindsData[bodyIndex]!,
+      this.kindsData[otherIndex]!,
+    );
+    const participantKinds: readonly [BodyKind, BodyKind] = [
+      this.kindsData[bodyIndex]!,
+      this.kindsData[otherIndex]!,
+    ];
+    const participantColors: readonly [string, string] = [
+      this.colorsData[bodyIndex]!,
+      this.colorsData[otherIndex]!,
+    ];
+    const participantVisualRadii: readonly [number, number] = [
+      this.renderRadiusData[bodyIndex]!,
+      this.renderRadiusData[otherIndex]!,
+    ];
 
     if (analysis.outcome === 'hit-and-run') {
       this.resolveHitAndRun(bodyIndex, otherIndex, relativePosition);
@@ -398,7 +419,12 @@ export class NBodySimulation {
         analysis,
         contactPosition,
         contactNormal,
+        relativeVelocity,
         visualRadius,
+        visualClass,
+        participantKinds,
+        participantColors,
+        participantVisualRadii,
         0,
       );
     } else if (analysis.outcome === 'disruption') {
@@ -411,7 +437,12 @@ export class NBodySimulation {
         analysis,
         contactPosition,
         contactNormal,
+        relativeVelocity,
         visualRadius,
+        visualClass,
+        participantKinds,
+        participantColors,
+        participantVisualRadii,
         0,
       );
     } else {
@@ -420,7 +451,12 @@ export class NBodySimulation {
         analysis,
         contactPosition,
         contactNormal,
+        relativeVelocity,
         visualRadius,
+        visualClass,
+        participantKinds,
+        participantColors,
+        participantVisualRadii,
         1,
       );
       this.mergePair(bodyIndex, otherIndex, analysis);
@@ -583,7 +619,12 @@ export class NBodySimulation {
     analysis: CollisionAnalysis,
     position: Vector3Tuple,
     normal: Vector3Tuple,
+    relativeVelocity: Vector3Tuple,
     visualRadius: number,
+    visualClass: CollisionEvent['visualClass'],
+    participantKinds: CollisionEvent['participantKinds'],
+    participantColors: CollisionEvent['participantColors'],
+    participantVisualRadii: CollisionEvent['participantVisualRadii'],
     fragmentCount: number,
   ): void {
     this.collisionSequence += 1;
@@ -591,13 +632,18 @@ export class NBodySimulation {
       sequence: this.collisionSequence,
       time: this.elapsedTime,
       outcome: analysis.outcome,
+      visualClass,
       participants,
+      participantKinds,
+      participantColors,
+      participantVisualRadii,
       impactSpeed: analysis.impactSpeed,
       mutualEscapeSpeed: analysis.mutualEscapeSpeed,
       specificImpactEnergy: analysis.specificImpactEnergy,
       disruptionThreshold: analysis.disruptionThreshold,
       position,
       normal,
+      relativeVelocity,
       visualRadius,
       // The empirical giant-impact ensemble gives a characteristic escaping
       // debris speed near half the impact speed. This is metadata for the

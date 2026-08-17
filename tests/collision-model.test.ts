@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { analyzeCollision } from '../src/simulations/orbital-lab/model/collision-model';
+import {
+  analyzeCollision,
+  classifyCollisionVisual,
+} from '../src/simulations/orbital-lab/model/collision-model';
 
 const baseCollision = {
   firstMass: 1,
@@ -14,6 +17,14 @@ const baseCollision = {
 };
 
 describe('gravity-regime collision model', () => {
+  it('assigns distinct visual regimes without changing the dynamical outcome', () => {
+    expect(classifyCollisionVisual('rocky', 'terrestrial')).toBe('planetary-impact');
+    expect(classifyCollisionVisual('star', 'star')).toBe('stellar-merger');
+    expect(classifyCollisionVisual('black-hole', 'star')).toBe('tidal-disruption');
+    expect(classifyCollisionVisual('black-hole', 'terrestrial')).toBe('horizon-capture');
+    expect(classifyCollisionVisual('black-hole', 'black-hole')).toBe('compact-merger');
+  });
+
   it('classifies low-energy contact as accretion', () => {
     const collision = analyzeCollision({
       ...baseCollision,

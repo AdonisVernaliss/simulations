@@ -73,11 +73,22 @@ export type CollisionOutcome =
   | 'capture'
   | 'black-hole-merger';
 
+export type CollisionVisualClass =
+  | 'planetary-impact'
+  | 'stellar-merger'
+  | 'tidal-disruption'
+  | 'horizon-capture'
+  | 'compact-merger';
+
 export interface CollisionEvent {
   readonly sequence: number;
   readonly time: number;
   readonly outcome: CollisionOutcome;
+  readonly visualClass: CollisionVisualClass;
   readonly participants: readonly [string, string];
+  readonly participantKinds: readonly [BodyKind, BodyKind];
+  readonly participantColors: readonly [string, string];
+  readonly participantVisualRadii: readonly [number, number];
   readonly impactSpeed: number;
   readonly mutualEscapeSpeed: number;
   readonly specificImpactEnergy: number;
@@ -86,6 +97,7 @@ export interface CollisionEvent {
   readonly position: Vector3Tuple;
   /** Unit vector from the first participant toward the second at contact. */
   readonly normal: Vector3Tuple;
+  readonly relativeVelocity: Vector3Tuple;
   /** Largest readability radius of the colliding pair. */
   readonly visualRadius: number;
   /** Characteristic unresolved ejecta speed in model units per time unit. */
