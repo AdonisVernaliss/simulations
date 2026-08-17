@@ -117,7 +117,9 @@ The tidal-encounter preset compares the leading Newtonian acceleration differenc
 T = 2 M_BH R³ / (m d³).
 ```
 
-The renderer begins a volume-preserving elongation toward the black hole as `T` grows; around `T ≈ 1`, the leading tidal gradient rivals the body's self-gravity. At capture it continues the encounter with a massless bound/unbound tracer stream aligned to the measured approach velocity. This is a physically scaled indicator and an educational spaghettification cue, not a deformable-fluid solution. The N-body solver still advances one center of mass for the star and does not calculate pressure, stellar structure, mass stripping, fallback, or stream self-intersection. Close Kerr orbits require a relativistic tidal tensor rather than this Newtonian estimate.
+In the principal frame of a point-mass source, the leading Newtonian tidal tensor has the trace-free eigenvalue ratio `2 : −1 : −1`: radial stretching is accompanied by compression along both transverse axes. Inspired by affine stellar models, the renderer maps `T` to one bounded ellipsoid and enforces `a_long a_trans² = 1`. This is a reduced-order response, not an integration of the affine deformation matrix or the star's internal shells.
+
+As disruption begins, two deterministic, massless GPU streams grow on the inward and outward sides before contact. Their axes follow the instantaneous black-hole direction, while the selected detail level caps them at 80, 180, or 320 tracers. At capture, the collision-event stream continues the measured approach. Together these layers make spaghettification legible without pretending to solve a deformable fluid. The N-body solver still advances one center of mass and does not calculate stellar pressure, density structure, mass stripping, fallback, shocks, circularization, or stream self-intersection. Close Kerr encounters require a relativistic tidal tensor and relativistic hydrodynamics rather than this Newtonian estimate.
 
 ## Collisions
 
@@ -222,6 +224,7 @@ Open publication does not automatically permit copying code or datasets. Equatio
 - Z. M. Leinhardt and S. T. Stewart, [Collisions Between Gravity-Dominated Bodies: I. Outcome Regimes and Scaling Laws](https://arxiv.org/abs/1106.6084), *The Astrophysical Journal* 745 (2012), 79.
 - M. Ishii, M. Shibata, and Y. Mino, [Black hole tidal problem in the Fermi normal coordinates](https://arxiv.org/abs/gr-qc/0501084), *Physical Review D* 71 (2005), 044017.
 - M. Kesden, [Tidal disruption rate of stars by spinning supermassive black holes](https://arxiv.org/abs/1109.6329), *Physical Review D* 85 (2012), 024037.
+- E. M. Rossi et al., [Tidal Disruption Events](https://arxiv.org/abs/2005.12528), *Space Science Reviews* 217 (2021), 40; review of frozen-in, affine, hydrodynamic, fallback, and relativistic TDE models used to bound the interactive approximation.
 - V. Perlick and O. Y. Tsupko, [Calculating black hole shadows: Review of analytical studies](https://arxiv.org/abs/2105.07101), *Physics Reports* 947 (2022), 1–39.
 - E. Bruneton, [Real-time High-Quality Rendering of Non-Rotating Black Holes](https://arxiv.org/abs/2010.08735) (2020), and the [BSD-licensed reference implementation](https://github.com/ebruneton/black_hole_shader); Schwarzschild deflection and disk-intersection lookup parameterization.
 - O. James, E. von Tunzelmann, P. Franklin, and K. S. Thorne, [Gravitational lensing by spinning black holes in astrophysics, and in the movie Interstellar](https://arxiv.org/abs/1502.03808), *Classical and Quantum Gravity* 32 (2015), 065001; DNGR image anatomy and Kerr ray-bundle rendering used as the visual reference, not as the sandbox numerical method.

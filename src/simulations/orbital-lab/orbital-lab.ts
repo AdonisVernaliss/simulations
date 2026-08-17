@@ -96,7 +96,7 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     label: 'Tidal encounter',
     title: 'A gravity gradient stretches a star',
     question: 'When does a star stop behaving like one rigid sphere?',
-    observation: 'Stretching grows with 2MᴮᴴR³/(md³). Near unity, the leading tidal gradient rivals the star’s own surface gravity.',
+    observation: 'Stretching grows with 2MᴮᴴR³/(md³). The trace-free 2:−1:−1 tidal tensor elongates the body radially and compresses both transverse axes.',
   },
   {
     id: 'horizon-capture',
@@ -730,7 +730,7 @@ export class OrbitalLab {
           : selection.body.surface === 'stellar-merger'
             ? 'An expanded stellar-merger envelope with a turbulent photosphere and equatorial outflow. Gravity conserves resolved mass and momentum; internal mixing, radiative transfer and dust formation require stellar hydrodynamics.'
           : selection.body.id === 'tidally-stretched-star'
-            ? 'The shape follows the black hole’s tidal gradient. Stretching rises as inverse distance cubed; near a stress ratio of one, the leading tidal acceleration across the star matches its surface self-gravity. Fluid breakup is not simulated.'
+            ? 'The shape uses a bounded, volume-preserving affine response to the black hole’s trace-free 2:−1:−1 tidal tensor. Two massless GPU streams appear before capture to distinguish inward and outward debris; stellar pressure, fallback, shocks and self-intersection still require hydrodynamics.'
           : selection.body.surface === 'quasar'
             ? 'Active Schwarzschild object: null geodesics form a 2.598 rₛ shadow and show the rear face of the thin disk above and below it. The disk begins at the 3 rₛ ISCO. Jets are qualitative emission cones; all bodies still share the gravity solver.'
             : selection.body.surface === 'accretion-disk'
@@ -738,7 +738,7 @@ export class OrbitalLab {
               : selection.body.kind === 'black-hole'
                 ? 'Naked Schwarzschild black hole: no emitting disk is assumed. The horizon is at rₛ, photons can orbit only unstably at 1.5 rₛ, and bent background light outlines the critical 3√3/2 rₛ ≈ 2.598 rₛ shadow.'
             : selection.body.kind === 'pulsar'
-              ? 'A rotating neutron star with analytic closed dipole lines, swept-back open lines, a corrugated current-sheet proxy, polar caps, and magnetic-axis lighthouse beams. The object itself has mass and participates in every N-body interaction.'
+              ? 'A rotating neutron star with analytic closed dipole lines, swept-back open lines, a corrugated equatorial current sheet, polar caps, and feathered magnetic-axis beams. The layered topology follows force-free/PIC morphology published by NASA GSFC; the object itself remains a massive N-body participant.'
               : selection.body.kind === 'neutron-star'
                 ? 'A compact stellar remnant shown at an enlarged visual radius. Its mass and physical radius—not the glow—set dynamics and contact.'
                 : 'Rendered size is enlarged for readability; gravity and collisions use the physical radius and mass.';

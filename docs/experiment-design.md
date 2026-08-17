@@ -71,7 +71,7 @@ physical scale of the same normalized Schwarzschild geometry.
 - accretion requires disk or plasma dynamics plus radiation, with the current thin-disk laboratory serving only as an analytic baseline;
 - binary-black-hole waveforms require numerical-relativity or validated surrogate data; the sandbox implements only contact, retained momentum, and a bounded radiated-mass estimate.
 
-The interface does not reuse the light-ray integrator to fake a stellar orbit or add an artistic jet to the thin-disk equations. The collision model detects the catastrophic-energy boundary but deliberately omits invented massive fragments: bounded massless tracers communicate unresolved flow without entering the dynamics. The tidal scene exposes a leading-order stress ratio, volume-preserving deformation, and a post-capture tracer stream without claiming stellar-fluid evolution. Any future hydrodynamic or numerical-relativity mode requires its own model card and tests.
+The interface does not reuse the light-ray integrator to fake a stellar orbit or add an artistic jet to the thin-disk equations. The collision model detects the catastrophic-energy boundary but deliberately omits invented massive fragments: bounded massless tracers communicate unresolved flow without entering the dynamics. The tidal scene exposes a leading-order stress ratio, a trace-free volume-preserving affine response, and bounded pre-contact and capture streams without claiming stellar-fluid evolution. Any future hydrodynamic or numerical-relativity mode requires its own model card and tests.
 
 ## Performance rules
 
