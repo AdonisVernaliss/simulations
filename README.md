@@ -25,7 +25,7 @@ mode without changing the underlying physical model. See
 
 The first simulation models gravitational systems with:
 
-- twelve systems covering the Solar System, stellar and compact binaries, a figure eight, black-hole encounters, tidal stretching and mergers, naked and accreting black holes, an active nucleus, a pulsar system, and planetary accretion;
+- fourteen systems covering the Solar System, stellar and compact binaries, a figure eight, black-hole encounters, tidal disruption, horizon capture, stellar and compact mergers, naked and accreting black holes, an active nucleus, a pulsar system, and planetary accretion;
 - black holes, active nuclei, neutron stars, pulsars, ordinary stars, terrestrial worlds, rocky bodies, gas giants, and ice giants in one N-body scene;
 - configurable object type, mass, position, velocity, physical radius, visual radius, and color;
 - orbital trails and optional velocity vectors;

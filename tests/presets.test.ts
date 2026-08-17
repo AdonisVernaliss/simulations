@@ -147,4 +147,33 @@ describe('orbital presets', () => {
 
     expect(strongestRatio).toBeGreaterThan(0.8);
   });
+
+  it('provides a reproducible preset for every collision visual regime', () => {
+    const eventPresets = [
+      ['head-on-collision', 'planetary-impact'],
+      ['stellar-merger', 'stellar-merger'],
+      ['tidal-encounter', 'tidal-disruption'],
+      ['horizon-capture', 'horizon-capture'],
+      ['black-hole-merger', 'compact-merger'],
+    ] as const;
+
+    for (const [presetId, visualClass] of eventPresets) {
+      const preset = presets.find((candidate) => candidate.id === presetId);
+      expect(preset, `${presetId} preset`).toBeDefined();
+      const simulation = new NBodySimulation(preset!.bodies, {
+        collisions: true,
+        softening: 0.0001,
+      });
+
+      for (
+        let index = 0;
+        index < 8_000 && simulation.lastCollisionEvent === undefined;
+        index += 1
+      ) {
+        simulation.step(preset!.fixedStep);
+      }
+
+      expect(simulation.lastCollisionEvent?.visualClass, presetId).toBe(visualClass);
+    }
+  });
 });

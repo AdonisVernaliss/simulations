@@ -28,7 +28,9 @@ type OrbitalExperimentId =
   | 'pulsar-system'
   | 'neutron-star-binary'
   | 'tidal-encounter'
+  | 'horizon-capture'
   | 'binary-stars'
+  | 'stellar-merger'
   | 'figure-eight'
   | 'head-on-collision';
 
@@ -97,11 +99,25 @@ const ORBITAL_EXPERIMENTS: readonly GuidedExperiment<OrbitalExperimentId>[] = [
     observation: 'Stretching grows with 2MᴮᴴR³/(md³). Near unity, the leading tidal gradient rivals the star’s own surface gravity.',
   },
   {
+    id: 'horizon-capture',
+    label: 'Horizon capture',
+    title: 'Tidal stretching ends at capture',
+    question: 'What changes when an extended world reaches the physical capture radius?',
+    observation: 'The body elongates with the gravity gradient, then its resolved mass and momentum join the black hole while a massless stream marks the final approach.',
+  },
+  {
     id: 'binary-stars',
     label: 'Binary stars',
     title: 'Orbit a shared center of mass',
     question: 'What does each equal star orbit when neither is fixed?',
     observation: 'Both stars remain opposite and circle the stationary barycentre between them.',
+  },
+  {
+    id: 'stellar-merger',
+    label: 'Stellar merger',
+    title: 'Contact creates an expanded stellar envelope',
+    question: 'Why does a stellar merger not look like a planetary impact?',
+    observation: 'The remnant expands inside a rotating equatorial shock flow; stellar mixing and radiative transfer remain unresolved.',
   },
   {
     id: 'figure-eight',
