@@ -33,19 +33,36 @@ describe('impact ejecta tracer', () => {
 
     expect(cloud.points.visible).toBe(true);
     expect(cloud.points.position.toArray()).toEqual(collision.position);
-    expect(cloud.points.geometry.drawRange.count).toBe(96);
+    expect(cloud.points.geometry.drawRange.count).toBe(128);
     expect(
       Array.from(cloud.points.geometry.getAttribute('aVelocity').array).every(Number.isFinite),
     ).toBe(true);
 
-    cloud.update(6, 600);
+    cloud.update(7, 600);
     expect(cloud.points.visible).toBe(false);
     cloud.dispose();
   });
 
-  it('does not draw material ejecta for horizon capture', () => {
+  it('draws a tidal stream for horizon capture', () => {
     const cloud = new ImpactEjectaCloud();
-    cloud.show({ ...collision, outcome: 'capture' });
+    cloud.show({
+      ...collision,
+      outcome: 'capture',
+      visualClass: 'horizon-capture',
+      participantKinds: ['black-hole', 'terrestrial'],
+    });
+    expect(cloud.points.visible).toBe(true);
+    cloud.dispose();
+  });
+
+  it('does not invent luminous matter for a vacuum black-hole merger', () => {
+    const cloud = new ImpactEjectaCloud();
+    cloud.show({
+      ...collision,
+      outcome: 'black-hole-merger',
+      visualClass: 'compact-merger',
+      participantKinds: ['black-hole', 'black-hole'],
+    });
     expect(cloud.points.visible).toBe(false);
     cloud.dispose();
   });
