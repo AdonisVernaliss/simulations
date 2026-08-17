@@ -24,6 +24,7 @@ describe('gravity-regime collision model', () => {
     expect(classifyCollisionVisual('black-hole', 'star')).toBe('tidal-disruption');
     expect(classifyCollisionVisual('black-hole', 'terrestrial')).toBe('horizon-capture');
     expect(classifyCollisionVisual('black-hole', 'black-hole')).toBe('compact-merger');
+    expect(classifyCollisionVisual('black-hole', 'neutron-star')).toBe('compact-merger');
   });
 
   it('classifies low-energy contact as accretion', () => {

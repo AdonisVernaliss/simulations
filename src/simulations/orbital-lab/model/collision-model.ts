@@ -39,12 +39,14 @@ export const classifyCollisionVisual = (
 
   const includesBlackHole = firstKind === 'black-hole' || secondKind === 'black-hole';
   const includesOrdinaryStar = firstKind === 'star' || secondKind === 'star';
+  const compactKinds: readonly BodyKind[] = ['neutron-star', 'pulsar'];
   if (includesBlackHole) {
-    return includesOrdinaryStar ? 'tidal-disruption' : 'horizon-capture';
+    if (includesOrdinaryStar) return 'tidal-disruption';
+    const companionKind = firstKind === 'black-hole' ? secondKind : firstKind;
+    return compactKinds.includes(companionKind) ? 'compact-merger' : 'horizon-capture';
   }
 
   if (includesOrdinaryStar) return 'stellar-merger';
-  const compactKinds: readonly BodyKind[] = ['neutron-star', 'pulsar'];
   if (compactKinds.includes(firstKind) && compactKinds.includes(secondKind)) {
     return 'compact-merger';
   }
