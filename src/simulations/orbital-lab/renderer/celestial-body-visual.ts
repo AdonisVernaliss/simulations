@@ -1,11 +1,15 @@
 import {
   AdditiveBlending,
   BackSide,
+  BufferAttribute,
+  BufferGeometry,
   CanvasTexture,
   Color,
   ConeGeometry,
   DoubleSide,
   Group,
+  LineBasicMaterial,
+  LineSegments,
   LinearMipmapLinearFilter,
   Material,
   Matrix3,
@@ -23,7 +27,6 @@ import {
   SRGBColorSpace,
   Texture,
   TextureLoader,
-  TorusGeometry,
   Vector3,
 } from 'three';
 
@@ -34,6 +37,7 @@ import {
   BLACK_HOLE_BEAM_VERTEX_SHADER,
 } from './black-hole-beam-shader';
 import { ImpactRemnantVisual } from './impact-remnant-visual';
+import { createPulsarMagnetosphereLayout } from './pulsar-magnetosphere';
 import { SchwarzschildBeamResources } from './schwarzschild-beam-resources';
 
 interface GeometryDetail {
@@ -234,6 +238,28 @@ const STELLAR_MERGER_FRAGMENT_SHADER = `
     color = mix(color, shock, hotCell * 0.46);
     color *= 0.66 + 0.34 * limb;
     gl_FragColor = vec4(color, 1.0);
+  }
+`;
+
+const PULSAR_BEAM_VERTEX_SHADER = `
+  varying vec3 vLocalPosition;
+
+  void main() {
+    vLocalPosition = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const PULSAR_BEAM_FRAGMENT_SHADER = `
+  precision highp float;
+  varying vec3 vLocalPosition;
+
+  void main() {
+    float axial = clamp(vLocalPosition.y / 9.5 + 0.5, 0.0, 1.0);
+    float pulseCore = pow(axial, 1.35);
+    float feather = 0.35 + 0.65 * smoothstep(0.0, 0.22, axial);
+    vec3 color = mix(vec3(0.18, 0.58, 1.0), vec3(0.83, 0.97, 1.0), pulseCore);
+    gl_FragColor = vec4(color, (0.018 + pulseCore * 0.12) * feather);
   }
 `;
 
@@ -445,6 +471,7 @@ export class CelestialBodyVisual {
   private compactField: Group | undefined;
   private impactRemnantVisual: ImpactRemnantVisual | undefined;
   private readonly decorativeMeshes: Mesh[] = [];
+  private readonly decorativeLines: LineSegments<BufferGeometry, LineBasicMaterial>[] = [];
   private readonly cameraLocal = new Vector3();
   private readonly diskToWorld = new Matrix3();
   private readonly worldToDisk = new Matrix3();
@@ -700,6 +727,10 @@ export class CelestialBodyVisual {
         mesh.material.dispose();
       }
     }
+    for (const line of this.decorativeLines) {
+      line.geometry.dispose();
+      line.material.dispose();
+    }
 
     for (const child of this.root.children) {
       if (child instanceof Sprite) {
@@ -721,47 +752,80 @@ export class CelestialBodyVisual {
 
   private addCompactStarField(includeBeams: boolean): void {
     this.compactField = new Group();
-    this.compactField.rotation.z = 0.42;
-
-    for (const radius of [1.5, 2.05, 2.6]) {
-      const line = new Mesh(
-        new TorusGeometry(radius, 0.014, 5, GEOMETRY_DETAIL[this.quality].ringSegments),
-        new MeshBasicMaterial({
-          color: 0x7adfff,
-          transparent: true,
-          opacity: 0.18,
-          blending: AdditiveBlending,
-          depthWrite: false,
-          toneMapped: false,
-        }),
-      );
-      line.rotation.x = Math.PI / 2;
-      this.compactField.add(line);
-      this.decorativeMeshes.push(line);
-    }
+    const magneticFrame = new Group();
+    magneticFrame.rotation.z = includeBeams ? 0.56 : 0.28;
+    const layout = createPulsarMagnetosphereLayout();
+    const closedField = this.createMagneticLines(layout.closedField, 0x69cfff, 0.3);
+    magneticFrame.add(closedField);
 
     if (includeBeams) {
+      const openField = this.createMagneticLines(layout.openField, 0x9cddff, 0.24);
+      const currentSheet = this.createMagneticLines(layout.currentSheet, 0xff6ba8, 0.34);
+      magneticFrame.add(openField);
+      this.compactField.add(currentSheet);
+
       for (const direction of [-1, 1]) {
         const beam = new Mesh(
-          new ConeGeometry(0.58, 7.5, 24, 1, true),
-          new MeshBasicMaterial({
-            color: 0xbcefff,
+          new ConeGeometry(0.72, 9.5, 32, 1, true),
+          new ShaderMaterial({
+            vertexShader: PULSAR_BEAM_VERTEX_SHADER,
+            fragmentShader: PULSAR_BEAM_FRAGMENT_SHADER,
             transparent: true,
-            opacity: 0.052,
             blending: AdditiveBlending,
             depthWrite: false,
             side: DoubleSide,
             toneMapped: false,
           }),
         );
-        beam.position.y = direction * 3.75;
+        beam.position.y = direction * 4.75;
         if (direction < 0) beam.rotation.z = Math.PI;
-        this.compactField.add(beam);
+        beam.renderOrder = 4;
+        magneticFrame.add(beam);
         this.decorativeMeshes.push(beam);
+
+        const polarCap = new Mesh(
+          new SphereGeometry(0.115, 16, 10),
+          new MeshBasicMaterial({
+            color: 0xe5f8ff,
+            transparent: true,
+            opacity: 0.96,
+            blending: AdditiveBlending,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        );
+        polarCap.position.y = direction * 1.02;
+        polarCap.renderOrder = 5;
+        magneticFrame.add(polarCap);
+        this.decorativeMeshes.push(polarCap);
       }
     }
 
+    this.compactField.add(magneticFrame);
     this.oriented.add(this.compactField);
+  }
+
+  private createMagneticLines(
+    positions: Float32Array,
+    color: number,
+    opacity: number,
+  ): LineSegments<BufferGeometry, LineBasicMaterial> {
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(positions, 3));
+    const line = new LineSegments(
+      geometry,
+      new LineBasicMaterial({
+        color,
+        transparent: true,
+        opacity,
+        blending: AdditiveBlending,
+        depthWrite: false,
+        toneMapped: false,
+      }),
+    );
+    line.renderOrder = 3;
+    this.decorativeLines.push(line);
+    return line;
   }
 
   private addQuasarJets(frame: Group): void {

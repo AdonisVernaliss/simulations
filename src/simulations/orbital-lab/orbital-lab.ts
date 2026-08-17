@@ -738,7 +738,7 @@ export class OrbitalLab {
               : selection.body.kind === 'black-hole'
                 ? 'Naked Schwarzschild black hole: no emitting disk is assumed. The horizon is at rₛ, photons can orbit only unstably at 1.5 rₛ, and bent background light outlines the critical 3√3/2 rₛ ≈ 2.598 rₛ shadow.'
             : selection.body.kind === 'pulsar'
-              ? 'A rotating neutron star. The cones mark an idealized magnetic-axis lighthouse beam; the object itself has mass and participates in every N-body interaction.'
+              ? 'A rotating neutron star with analytic closed dipole lines, swept-back open lines, a corrugated current-sheet proxy, polar caps, and magnetic-axis lighthouse beams. The object itself has mass and participates in every N-body interaction.'
               : selection.body.kind === 'neutron-star'
                 ? 'A compact stellar remnant shown at an enlarged visual radius. Its mass and physical radius—not the glow—set dynamics and contact.'
                 : 'Rendered size is enlarged for readability; gravity and collisions use the physical radius and mass.';
