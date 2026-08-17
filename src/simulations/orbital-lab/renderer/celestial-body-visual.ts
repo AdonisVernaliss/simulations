@@ -257,7 +257,7 @@ const PULSAR_BEAM_FRAGMENT_SHADER = `
   varying vec3 vLocalPosition;
 
   void main() {
-    float axial = clamp(vLocalPosition.y / 9.5 + 0.5, 0.0, 1.0);
+    float axial = clamp(vLocalPosition.y / 48.0 + 0.5, 0.0, 1.0);
     float pulseCore = pow(axial, 1.35);
     float feather = 0.35 + 0.65 * smoothstep(0.0, 0.22, axial);
     vec3 color = mix(vec3(0.18, 0.58, 1.0), vec3(0.83, 0.97, 1.0), pulseCore);
@@ -774,18 +774,18 @@ export class CelestialBodyVisual {
     const magneticFrame = new Group();
     magneticFrame.rotation.z = includeBeams ? 0.56 : 0.28;
     const layout = createPulsarMagnetosphereLayout();
-    const closedField = this.createMagneticLines(layout.closedField, 0x69cfff, 0.3);
+    const closedField = this.createMagneticLines(layout.closedField, 0x69cfff, 0.36);
     magneticFrame.add(closedField);
 
     if (includeBeams) {
-      const openField = this.createMagneticLines(layout.openField, 0x9cddff, 0.24);
-      const currentSheet = this.createMagneticLines(layout.currentSheet, 0xff6ba8, 0.34);
+      const openField = this.createMagneticLines(layout.openField, 0x9cddff, 0.3);
+      const currentSheet = this.createMagneticLines(layout.currentSheet, 0xff6ba8, 0.32);
       magneticFrame.add(openField);
       this.compactField.add(currentSheet);
 
       for (const direction of [-1, 1]) {
         const beam = new Mesh(
-          new ConeGeometry(0.72, 9.5, 32, 1, true),
+          new ConeGeometry(3.64, 48, 32, 1, true),
           new ShaderMaterial({
             vertexShader: PULSAR_BEAM_VERTEX_SHADER,
             fragmentShader: PULSAR_BEAM_FRAGMENT_SHADER,
@@ -796,7 +796,7 @@ export class CelestialBodyVisual {
             toneMapped: false,
           }),
         );
-        beam.position.y = direction * 4.75;
+        beam.position.y = direction * 24;
         if (direction < 0) beam.rotation.z = Math.PI;
         beam.renderOrder = 4;
         magneticFrame.add(beam);

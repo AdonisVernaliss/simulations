@@ -4,6 +4,9 @@ export interface PulsarMagnetosphereLayout {
   readonly currentSheet: Float32Array;
 }
 
+const LIGHT_CYLINDER_RADIUS = 2.75;
+const WIND_RENDER_RADIUS = 46;
+
 type Point = readonly [number, number, number];
 
 const appendSegment = (target: number[], first: Point, second: Point): void => {
@@ -22,8 +25,9 @@ const dipolePoint = (shellRadius: number, theta: number, azimuth: number): Point
 
 /**
  * Browser-scale morphology of a rotating force-free pulsar magnetosphere.
- * Closed lines use the static dipole solution; polar lines open and sweep
- * backward outside the normalized light-cylinder radius.
+ * Closed lines use the static dipole solution inside the light cylinder.
+ * Outside it, polar lines approach a radial force-free wind while rotation
+ * winds their azimuth into the split-monopole/striped-wind morphology.
  */
 export const createPulsarMagnetosphereLayout = (): PulsarMagnetosphereLayout => {
   const closedField: number[] = [];
@@ -50,11 +54,14 @@ export const createPulsarMagnetosphereLayout = (): PulsarMagnetosphereLayout => 
     for (let azimuthIndex = 0; azimuthIndex < 8; azimuthIndex += 1) {
       const baseAzimuth = (azimuthIndex / 8) * Math.PI * 2;
       let previous: Point = [Math.cos(baseAzimuth) * 0.24, hemisphere * 0.97, Math.sin(baseAzimuth) * 0.24];
-      for (let step = 1; step <= 34; step += 1) {
-        const fraction = step / 34;
-        const axial = hemisphere * (0.97 + fraction * 4.15);
-        const cylindricalRadius = 0.24 + fraction * 1.05 + fraction ** 2 * 0.42;
-        const sweptAzimuth = baseAzimuth - hemisphere * fraction ** 2 * 0.82;
+      for (let step = 1; step <= 96; step += 1) {
+        const fraction = step / 96;
+        const radialDistance = 1 + fraction * (WIND_RENDER_RADIUS - 1);
+        const openingAngle = 0.235 + 0.045 * (1 - Math.exp(-fraction * 7));
+        const axial = hemisphere * radialDistance * Math.cos(openingAngle);
+        const cylindricalRadius = radialDistance * Math.sin(openingAngle);
+        const sweptAzimuth =
+          baseAzimuth - hemisphere * (radialDistance - 1) / LIGHT_CYLINDER_RADIUS;
         const next: Point = [
           Math.cos(sweptAzimuth) * cylindricalRadius,
           axial,
@@ -68,11 +75,13 @@ export const createPulsarMagnetosphereLayout = (): PulsarMagnetosphereLayout => 
 
   for (let layer = -1; layer <= 1; layer += 1) {
     let previous: Point | undefined;
-    for (let step = 0; step <= 96; step += 1) {
-      const fraction = step / 96;
-      const radius = 2.65 + fraction * 3.0;
-      const azimuth = fraction * Math.PI * 3.1 + layer * 0.18;
-      const ripple = Math.sin(azimuth * 2 - layer * 0.7) * 0.13 + layer * 0.07;
+    for (let step = 0; step <= 160; step += 1) {
+      const fraction = step / 160;
+      const radius = LIGHT_CYLINDER_RADIUS + fraction * (WIND_RENDER_RADIUS - LIGHT_CYLINDER_RADIUS);
+      const azimuth = (radius - LIGHT_CYLINDER_RADIUS) / LIGHT_CYLINDER_RADIUS + layer * 0.18;
+      const ripple =
+        Math.sin(azimuth * 2 - layer * 0.7) * (0.13 + fraction * 0.48) +
+        layer * (0.07 + fraction * 0.16);
       const next: Point = [
         Math.cos(azimuth) * radius,
         ripple,

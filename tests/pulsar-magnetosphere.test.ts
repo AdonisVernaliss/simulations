@@ -21,7 +21,7 @@ describe('pulsar magnetosphere geometry', () => {
     }
   });
 
-  it('opens polar lines beyond the light cylinder and keeps a finite current sheet', () => {
+  it('extends open polar wind lines to the scene boundary beyond the light cylinder', () => {
     const layout = createPulsarMagnetosphereLayout();
     const openRadii: number[] = [];
 
@@ -35,8 +35,8 @@ describe('pulsar magnetosphere geometry', () => {
       );
     }
 
-    expect(Math.max(...openRadii)).toBeGreaterThan(4.5);
+    expect(Math.max(...openRadii)).toBeGreaterThan(40);
     expect(Array.from(layout.currentSheet).every(Number.isFinite)).toBe(true);
-    expect(layout.currentSheet.length).toBeGreaterThan(400);
+    expect(layout.currentSheet.length).toBeGreaterThan(900);
   });
 });
