@@ -302,15 +302,13 @@ export class OrbitalRenderer {
       this.selectionRing.lookAt(this.camera.position);
     }
     this.controls.update();
+    this.bodyVisuals.forEach((visual) => visual.animate(elapsedSeconds));
     if (this.compactVisuals.length === 0) {
       this.renderer.render(this.scene, this.camera);
       return;
     }
 
-    this.compactVisuals.forEach((visual) => {
-      visual.animate(elapsedSeconds);
-      visual.faceCamera(this.camera.position);
-    });
+    this.compactVisuals.forEach((visual) => visual.faceCamera(this.camera.position));
     this.renderer.render(this.scene, this.camera);
     this.renderer.autoClear = false;
     this.renderer.clearDepth();

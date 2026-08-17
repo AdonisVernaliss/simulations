@@ -589,7 +589,7 @@ export const presets = [
         radius: 0.18,
         renderRadius: 0.18,
         color: '#ff9b63',
-        position: [-0.8, 0, 0],
+        position: [-0.8, -0.075, 0],
         velocity: [0.12, 0, 0],
       }),
       body({
@@ -601,7 +601,7 @@ export const presets = [
         radius: 0.18,
         renderRadius: 0.18,
         color: '#70cfff',
-        position: [0.8, 0, 0],
+        position: [0.8, 0.075, 0],
         velocity: [-0.12, 0, 0],
       }),
     ],

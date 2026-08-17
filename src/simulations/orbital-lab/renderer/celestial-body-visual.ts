@@ -33,6 +33,7 @@ import {
   BLACK_HOLE_BEAM_FRAGMENT_SHADER,
   BLACK_HOLE_BEAM_VERTEX_SHADER,
 } from './black-hole-beam-shader';
+import { ImpactRemnantVisual } from './impact-remnant-visual';
 import { SchwarzschildBeamResources } from './schwarzschild-beam-resources';
 
 interface GeometryDetail {
@@ -155,14 +156,28 @@ const IMPACT_REMNANT_FRAGMENT_SHADER = `
   }
 
   void main() {
-    vec3 advected = vObjectNormal * 6.8 + vec3(uTime * 0.025, 0.0, -uTime * 0.018);
-    float broad = fbm(advected);
-    float crustCells = fbm(vObjectNormal * 17.0 + vec3(0.0, uTime * 0.012, 0.0));
-    float fissures = 1.0 - smoothstep(0.045, 0.16, abs(crustCells - 0.54));
-    float exposedMelt = smoothstep(0.49, 0.73, broad) * 0.55 + fissures;
+    vec3 advected = vObjectNormal * 5.4 + vec3(uTime * 0.018, 0.0, -uTime * 0.013);
+    float mantleFlow = fbm(advected);
+    float plates = fbm(vObjectNormal * 10.5 + vec3(0.0, uTime * 0.006, 0.0));
+    float impactHemisphere = smoothstep(
+      -0.18,
+      0.82,
+      dot(vObjectNormal, normalize(vec3(0.68, 0.2, 0.71)))
+    );
+    float crust = smoothstep(0.48, 0.71, plates + (1.0 - impactHemisphere) * 0.12);
+    float channels = 1.0 - smoothstep(0.035, 0.13, abs(mantleFlow - 0.53));
+    float exposedMelt = clamp(
+      impactHemisphere * (1.0 - crust) * 0.74 + channels * 0.46,
+      0.0,
+      1.0
+    );
     float limb = pow(clamp(vViewNormal.z, 0.0, 1.0), 0.28);
-    vec3 cooledRock = vec3(0.055, 0.024, 0.018) * (0.65 + broad * 0.55);
-    vec3 lava = mix(uColor * vec3(0.9, 0.16, 0.018), vec3(1.0, 0.9, 0.42), fissures);
+    vec3 cooledRock = vec3(0.075, 0.054, 0.048) * (0.58 + plates * 0.62);
+    vec3 lava = mix(
+      uColor * vec3(0.95, 0.18, 0.018),
+      vec3(1.0, 0.86, 0.38),
+      channels * impactHemisphere
+    );
     vec3 color = mix(cooledRock, lava, clamp(exposedMelt, 0.0, 1.0));
     color *= 0.76 + 0.24 * limb;
     gl_FragColor = vec4(color, 1.0);
@@ -428,6 +443,7 @@ export class CelestialBodyVisual {
   private blackHoleMaterial: ShaderMaterial | undefined;
   private blackHoleResources: SchwarzschildBeamResources | undefined;
   private compactField: Group | undefined;
+  private impactRemnantVisual: ImpactRemnantVisual | undefined;
   private readonly decorativeMeshes: Mesh[] = [];
   private readonly cameraLocal = new Vector3();
   private readonly diskToWorld = new Matrix3();
@@ -449,7 +465,7 @@ export class CelestialBodyVisual {
     this.pickMesh = new Mesh(this.createSphereGeometry(), this.surfaceMaterial);
     this.pickMesh.userData.bodyIndex = bodyIndex;
     if (body.surface === 'impact-remnant') {
-      this.pickMesh.scale.set(1.08, 0.92, 1.006);
+      this.pickMesh.scale.set(1.1, 0.9, 1.01);
     } else {
       this.pickMesh.scale.y =
         body.kind === 'gas-giant' ? 0.94 : body.kind === 'ice-giant' ? 0.97 : 1;
@@ -533,6 +549,11 @@ export class CelestialBodyVisual {
       this.addCompactStarField(body.kind === 'pulsar');
     }
 
+    if (body.surface === 'impact-remnant') {
+      this.impactRemnantVisual = new ImpactRemnantVisual(quality);
+      this.oriented.add(this.impactRemnantVisual.group);
+    }
+
     if (body.kind === 'star' || body.surface === 'impact-remnant') {
       const glow = new Sprite(
         new SpriteMaterial({
@@ -592,12 +613,11 @@ export class CelestialBodyVisual {
   }
 
   animate(elapsedSeconds: number): void {
-    if (this.blackHoleMaterial === undefined) {
-      return;
-    }
-
     this.visualTime += elapsedSeconds;
-    this.blackHoleMaterial.uniforms.uVisualTime!.value = this.visualTime;
+    this.impactRemnantVisual?.update(elapsedSeconds);
+    if (this.blackHoleMaterial !== undefined) {
+      this.blackHoleMaterial.uniforms.uVisualTime!.value = this.visualTime;
+    }
   }
 
   setTidalDeformation(
@@ -650,6 +670,7 @@ export class CelestialBodyVisual {
       this.blackHoleMaterial.uniforms.uDetail!.value =
         quality === 'high' ? 2 : quality === 'balanced' ? 1 : 0;
     }
+    this.impactRemnantVisual?.setQuality(quality);
   }
 
   setSkyTexture(texture: Texture): void {
@@ -665,6 +686,7 @@ export class CelestialBodyVisual {
     this.atmosphereMaterial?.dispose();
     this.ring?.geometry.dispose();
     this.ringMaterial?.dispose();
+    this.impactRemnantVisual?.dispose();
     if (this.blackHoleMaterial !== undefined) {
       this.blackHoleResources?.unbind(this.blackHoleMaterial);
     }

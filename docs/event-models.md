@@ -20,7 +20,7 @@ An offline hydrodynamic or numerical-relativity result may be added only with it
 
 ## Current visual mappings
 
-- Planetary ejecta starts in the measured impact plane, mixes tangential and normal components, cools from melt/vapor colours toward dust, and remains capped by the selected quality level.
+- Planetary ejecta starts in the measured impact plane, mixes tangential and normal components, and cools from melt/vapor colours toward dust. A newly merged core carries a finite-age silicate-vapor shell and a flattened, differentially rotating debris population. Both layers remain massless and are capped by the selected quality level.
 - Stellar outflow begins as an equatorial spiral around the volume-equivalent remnant. The photosphere is expanded only in render space; its physical collision radius remains separate.
 - Tidal streams use the black-hole-to-victim radial axis and the projected relative velocity. Opposite radial signs distinguish material directed inward from material leaving the encounter.
 - Black-hole binaries in vacuum have no luminous particle effect. Their reported lost mass represents gravitational radiation, not ejecta.
@@ -37,4 +37,3 @@ Before an offline result set can replace a reduced-order visual, it must demonst
 4. deterministic interpolation with no unbounded browser allocations;
 5. a low-detail representation that preserves the same bulk morphology;
 6. source, code-version, licence, and paper metadata kept with the generated assets.
-
