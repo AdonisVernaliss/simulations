@@ -14,9 +14,9 @@ import {
 import type { QualityLevel } from './orbital-renderer';
 
 const SKY_TEXTURES: Record<QualityLevel, string> = {
-  low: '/textures/sky/gaia-edr3-all-sky-low.jpg',
-  balanced: '/textures/sky/gaia-edr3-all-sky-balanced.jpg',
-  high: '/textures/sky/gaia-edr3-all-sky-high.jpg',
+  low: '/textures/sky/nasa-deep-star-map-low.jpg',
+  balanced: '/textures/sky/nasa-deep-star-map-balanced.jpg',
+  high: '/textures/sky/nasa-deep-star-map-high.jpg',
 };
 
 const SKY_VERTEX_SHADER = `
@@ -41,8 +41,9 @@ const SKY_FRAGMENT_SHADER = `
       asin(clamp(direction.y, -1.0, 1.0)) / PI + 0.5
     );
     vec3 observed = texture2D(uSkyMap, uv).rgb;
-    vec3 lifted = observed * 1.26 + pow(observed, vec3(0.72)) * 0.14;
-    gl_FragColor = vec4(lifted, 1.0);
+    vec3 blackPoint = max(observed - vec3(0.0015), vec3(0.0));
+    vec3 exposed = vec3(1.0) - exp(-blackPoint * 1.08);
+    gl_FragColor = vec4(exposed, 1.0);
   }
 `;
 
@@ -57,7 +58,7 @@ export class SkyEnvironment {
   constructor(private readonly maximumAnisotropy: number) {
     this.activeTexture = this.getTexture('balanced');
     this.mesh = new Mesh(
-      new SphereGeometry(90, 48, 24),
+      new SphereGeometry(90, 96, 64),
       new ShaderMaterial({
         uniforms: { uSkyMap: { value: this.activeTexture } },
         vertexShader: SKY_VERTEX_SHADER,

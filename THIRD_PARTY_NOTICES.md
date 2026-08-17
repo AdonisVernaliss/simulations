@@ -35,14 +35,17 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-## Gaia EDR3 all-sky colour map
+## NASA Deep Star Maps 2020
 
-The three `public/textures/sky/gaia-edr3-all-sky-*.jpg` files are resolution
-variants of the equirectangular all-sky colour map published by the European
-Space Agency:
+The three `public/textures/sky/nasa-deep-star-map-*.jpg` files are resolution
+variants of the plate carrée OpenEXR star map published by NASA's Scientific
+Visualization Studio:
 
-- Source: https://www.esa.int/ESA_Multimedia/Images/2020/12/The_colour_of_the_sky_from_Gaia_s_Early_Data_Release_32
-- Credit: ESA/Gaia/DPAC; acknowledgement: A. Moitinho
-- License: CC BY-SA 3.0 IGO or ESA Standard Licence
+- Source: https://svs.gsfc.nasa.gov/4851
+- Credit: NASA/Goddard Space Flight Center Scientific Visualization Studio
+- Catalogue sources: Gaia DR2, Tycho-2, and Hipparcos-2
+- NASA media guidelines: https://www.nasa.gov/nasa-brand-center/images-and-media/
 
-These local resolution variants are distributed under CC BY-SA 3.0 IGO.
+NASA content is generally not subject to copyright in the United States. The
+NASA insignia and logotype are not used. Catalogue credits are retained as
+requested on the source page.

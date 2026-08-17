@@ -272,7 +272,8 @@ export const BLACK_HOLE_BEAM_FRAGMENT_SHADER = `
       asin(clamp(direction.y, -1.0, 1.0)) / PI + 0.5
     );
     vec3 observed = texture2D(uSkyMap, uv).rgb;
-    return observed * 1.26 + pow(observed, vec3(0.72)) * 0.14;
+    vec3 blackPoint = max(observed - vec3(0.0015), vec3(0.0));
+    return vec3(1.0) - exp(-blackPoint * 1.08);
   }
 
   void compositeDisc(
